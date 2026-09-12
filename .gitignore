@@ -1,0 +1,13 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+
+# Local secrets
+.env.local
+.env.*.local
+
+# Local tooling
+.DS_Store
+*.log
+*.tsbuildinfo

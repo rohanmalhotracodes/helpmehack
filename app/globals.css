@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --background: #000000;
+  --surface: #000000;
+  --surface-raised: #16181c;
+  --border: #2f3336;
+  --text: #e7e9ea;
+  --muted: #71767b;
+  --primary-bg: #eff3f4;
+  --primary-text: #0f1419;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--background); scroll-behavior: smooth; }
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--background);
+  color: #fafafa;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+::selection { background: rgba(29, 155, 240, .25); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #3f3f46; border: 3px solid #111114; border-radius: 999px; }
+
+.app-theme {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--text);
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.app-theme[data-theme="dark"] { color-scheme: dark; }
+.app-theme[data-theme="light"] {
+  color-scheme: light;
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-raised: #f7f9f9;
+  --border: #eff3f4;
+  --text: #0f1419;
+  --muted: #536471;
+  --primary-bg: #0f1419;
+  --primary-text: #ffffff;
+}
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.x-primary { background: var(--primary-bg); color: var(--primary-text); }
+.x-raised { background: var(--surface-raised); }
+.x-border { border-color: var(--border); }
+.x-text { color: var(--text); }
+.x-muted { color: var(--muted); }
+.placeholder-muted::placeholder { color: var(--muted); }
+.x-accent-border { border-left-color: var(--text); }
+.theme-checkbox { accent-color: var(--text); }
+.focus-ring:focus-visible { outline: 2px solid #1d9bf0; outline-offset: 2px; }
+.mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", ui-monospace, monospace; }
+.line-clamp-2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.event-carousel { scrollbar-width: none; overscroll-behavior-inline: contain; }
+.event-carousel::-webkit-scrollbar { display: none; }
+.brief-enter { animation: brief-enter 180ms cubic-bezier(.2,.8,.2,1); }
+@keyframes brief-enter { from { transform: translateX(20px); opacity: .7; } to { transform: translateX(0); opacity: 1; } }
+
+/* Normalize the existing dark utility palette into X's neutral light mode. */
+.app-theme[data-theme="light"] :is(.text-zinc-50, .text-zinc-100, .text-zinc-200, .text-zinc-300, .text-zinc-950) { color: #0f1419; }
+.app-theme[data-theme="light"] :is(.text-zinc-400, .text-zinc-500) { color: #536471; }
+.app-theme[data-theme="light"] :is(.text-zinc-600, .text-zinc-700) { color: #8b98a5; }
+.app-theme[data-theme="light"] .border-zinc-700 { border-color: #cfd9de; }
+.app-theme[data-theme="light"] .border-zinc-800 { border-color: #eff3f4; }
+.app-theme[data-theme="light"] [class~="bg-[#09090b]"],
+.app-theme[data-theme="light"] [class~="bg-[#111114]"],
+.app-theme[data-theme="light"] [class~="bg-[#151518]"],
+.app-theme[data-theme="light"] [class~="bg-[#0d0d0f]"] { background-color: #ffffff; }
+.app-theme[data-theme="light"] :is(.bg-zinc-950, .bg-zinc-900) { background-color: #f7f9f9; }
+.app-theme[data-theme="light"] [class*="bg-zinc-950/"],
+.app-theme[data-theme="light"] [class*="bg-zinc-900/"] { background-color: #f7f9f9; }
+.app-theme[data-theme="light"] .bg-zinc-800 { background-color: #eff3f4; }
+.app-theme[data-theme="light"] .bg-zinc-100 { background-color: #0f1419; }
+.app-theme[data-theme="light"] .bg-zinc-100.text-zinc-950 { color: #ffffff; }
+.app-theme[data-theme="light"] [class~="hover:bg-zinc-900"]:hover,
+.app-theme[data-theme="light"] [class~="hover:bg-zinc-800"]:hover { background-color: #eff3f4; }
+.app-theme[data-theme="light"] [class*="divide-zinc-800"] > :not(:last-child) { border-color: #eff3f4; }
+
+/* Normalize the light-directory utilities when Lights Out is active. */
+.app-theme[data-theme="dark"] :is(.text-slate-950, .text-slate-900, .text-slate-800, .text-slate-700) { color: #e7e9ea; }
+.app-theme[data-theme="dark"] :is(.text-slate-600, .text-slate-500, .text-slate-400) { color: #71767b; }
+.app-theme[data-theme="dark"] :is(.border-slate-100, .border-slate-200, .border-slate-300) { border-color: #2f3336; }
+.app-theme[data-theme="dark"] :is(.bg-white, .bg-slate-50) { background-color: #000000; }
+.app-theme[data-theme="dark"] .bg-slate-100 { background-color: #16181c; }
+.app-theme[data-theme="dark"] [class~="bg-slate-50/80"] { background-color: #16181c; }
+.app-theme[data-theme="dark"] [class~="hover:bg-slate-50/80"]:hover { background-color: #16181c; }
+.app-theme[data-theme="dark"] [class~="bg-[#111114]"],
+.app-theme[data-theme="dark"] [class~="bg-[#151518]"],
+.app-theme[data-theme="dark"] [class~="bg-[#0d0d0f]"] { background-color: #000000; }
+.app-theme[data-theme="dark"] :is(.border-zinc-700, .border-zinc-800) { border-color: #2f3336; }
+.app-theme .divide-y > :not(:last-child) { border-color: var(--border); }
+
+/* Status colors remain semantic but quiet in each theme. */
+.app-theme[data-theme="light"] [class*="bg-emerald-950"] { background-color: #e7f8f0; }
+.app-theme[data-theme="light"] [class*="border-emerald-9"] { border-color: #b7e4d0; }
+.app-theme[data-theme="light"] :is(.text-emerald-100, .text-emerald-200, .text-emerald-300, .text-emerald-400, .text-emerald-500) { color: #087d56; }
+.app-theme[data-theme="light"] [class*="bg-amber-950"] { background-color: #fff7e6; }
+.app-theme[data-theme="light"] [class*="border-amber-"] { border-color: #eedcba; }
+.app-theme[data-theme="light"] :is(.text-amber-100, .text-amber-200, .text-amber-300, .text-amber-400) { color: #8a5a00; }
+.app-theme[data-theme="light"] [class*="bg-orange-950"] { background-color: #fff3e8; }
+.app-theme[data-theme="light"] [class*="border-orange-"] { border-color: #f1d2b8; }
+.app-theme[data-theme="light"] :is(.text-orange-300, .text-orange-400) { color: #9a4f0c; }
+.app-theme[data-theme="light"] [class*="bg-red-950"] { background-color: #fdecec; }
+.app-theme[data-theme="light"] [class*="border-red-"] { border-color: #f1c6c6; }
+.app-theme[data-theme="light"] :is(.text-red-300, .text-red-400) { color: #b42323; }
+.app-theme[data-theme="dark"] .bg-emerald-100 { background-color: #0e2b22; }
+.app-theme[data-theme="dark"] .border-emerald-300 { border-color: #285c47; }
+.app-theme[data-theme="dark"] .text-emerald-800 { color: #72d7ad; }
+.app-theme[data-theme="dark"] .bg-amber-100 { background-color: #302610; }
+.app-theme[data-theme="dark"] .border-amber-300 { border-color: #66501c; }
+.app-theme[data-theme="dark"] .text-amber-800 { color: #ffd36a; }
+
+html:has(.app-theme[data-theme="light"]),
+body:has(.app-theme[data-theme="light"]) { background: #ffffff; color: #0f1419; color-scheme: light; }
+html:has(.app-theme[data-theme="light"]) ::-webkit-scrollbar-thumb { background: #cfd9de; border-color: #ffffff; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
