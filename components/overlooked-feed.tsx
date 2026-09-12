@@ -49,7 +49,7 @@ export function OverlookedFeed({ onOpenSource }: { onOpenSource: () => void }) {
                   <div className="flex gap-3">
                     <Image src="/helpmehack-mark.png" width={42} height={42} alt="" className="h-10 w-10 shrink-0 rounded-xl" />
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-1.5 text-sm"><strong className="x-text">HelpMeHack</strong><BadgeCheck size={15} aria-label="Administrator" className="text-[#1d9bf0]" /><span className="x-muted">@helpmehack · Admin</span></div>
+                      <div className="flex flex-wrap items-center gap-x-1.5 text-sm"><strong className="x-text">helpmehack</strong><BadgeCheck size={15} aria-label="Administrator" className="text-[#1d9bf0]" /><span className="x-muted">@helpmehack · Admin</span></div>
                       <p className="x-muted mt-3 flex items-center gap-1.5 text-xs font-medium uppercase tracking-[.1em]"><Icon size={13} aria-hidden="true" />{post.eyebrow}</p>
                       <h2 className="x-text mt-2 text-[17px] font-bold leading-6">{post.title}</h2>
                       <p className="x-text mt-2 text-[15px] leading-6">{post.body}</p>

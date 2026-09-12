@@ -69,7 +69,7 @@ function moderateReason(item: OpenSourceOpportunity) {
 
 function impactReason(item: OpenSourceOpportunity) {
   const stars = item.repositoryQuality?.stars ?? 0;
-  const parts = [stars ? `${stars.toLocaleString("en-US")} public stars` : "Established project evidence"];
+  const parts = ["Advanced contribution", stars ? `${stars.toLocaleString("en-US")} public stars` : "established project evidence"];
   if (factor(item, "newcomers") > 0) parts.push("newcomer merges observed");
   if (factor(item, "maintenance") > 0) parts.push("actively maintained");
   return parts.join(" · ");
@@ -82,20 +82,20 @@ export function rankOpenSourceTiers(records: OpenSourceOpportunity[]): OpenSourc
   for (const item of active) {
     const value = scores(item);
     const hints = new Set(item.discoveryTiers ?? []);
-    const beginnerLabel = item.experience === "Beginner" || item.labels.some((label) => /good first issue|beginner|first-timers-only/i.test(label));
-    const highImpact = value.stars >= 10_000 && factor(item, "reputation") >= 50 && (hints.has("high-impact") || value.stars >= 50_000);
-    const beginnerReady = beginnerLabel && (item.beginnerSuitability ?? 65) >= 58 && (factor(item, "onboarding") >= 30 || !item.repositoryQuality);
-    const moderateReady = hints.has("moderate") || (!beginnerReady && !highImpact);
+    const beginnerLabel = item.experience === "Beginner" || item.labels.some((label) => /good first issue|beginner|first[-\s]timers?[-\s]only/i.test(label));
+    const credibleProject = value.stars >= 50 || factor(item, "newcomers") > 0 || (item.repositoryQuality?.score ?? 0) >= 45;
+    const highImpact = hints.has("high-impact") && !beginnerLabel && value.stars >= 5_000 && factor(item, "reputation") >= 50 && factor(item, "maintenance") > 0 && (item.clarityReadiness ?? 35) >= 35;
+    const beginnerReady = !highImpact && beginnerLabel && credibleProject && (item.beginnerSuitability ?? 65) >= 60 && factor(item, "maintenance") > 0 && (factor(item, "onboarding") >= 30 || !item.repositoryQuality);
+    const moderateReady = !beginnerLabel && !highImpact && credibleProject && factor(item, "maintenance") > 0;
     if (beginnerReady) buckets.beginner.push({ item, rank: value.beginner, reason: beginnerReason(item) });
     if (moderateReady) buckets.moderate.push({ item, rank: value.moderate, reason: moderateReason(item) });
     if (highImpact) buckets["high-impact"].push({ item, rank: value.impact, reason: impactReason(item) });
-    if (!beginnerReady && !moderateReady && !highImpact) buckets.moderate.push({ item, rank: value.moderate, reason: moderateReason(item) });
   }
 
   Object.values(buckets).forEach((items) => items.sort((a, b) => b.rank - a.rank || Date.parse(b.item.updatedAt) - Date.parse(a.item.updatedAt)));
   return [
-    { id: "beginner", title: "Beginner-friendly", description: "Clearer scope, lower setup friction, and evidence that newcomers can get reviewed.", items: buckets.beginner },
-    { id: "moderate", title: "Moderate scope", description: "Active work that benefits from more project context or implementation experience.", items: buckets.moderate },
-    { id: "high-impact", title: "High project signal", description: "Widely adopted projects with strong public reputation evidence. Rows can overlap; this is not a hiring promise.", items: buckets["high-impact"] },
+    { id: "beginner", title: "Beginner-friendly", description: "Focused issues with newcomer labels, usable setup guidance, and evidence that first contributions can receive review.", items: buckets.beginner },
+    { id: "moderate", title: "Experienced contributors", description: "Larger implementation work for developers who can navigate an established codebase and its test suite.", items: buckets.moderate },
+    { id: "high-impact", title: "Major ecosystem projects", description: "Harder work in widely adopted, actively maintained codebases. A merged contribution is publicly verifiable, but no hiring outcome is implied.", items: buckets["high-impact"] },
   ];
 }

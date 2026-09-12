@@ -27,11 +27,11 @@ describe("open-source tier ranking", () => {
     const tiers = rankOpenSourceTiers([
       item("beginner"),
       item("moderate", { experience: "Intermediate", labels: ["help wanted"], beginnerSuitability: 45 }),
-      item("impact", { repositoryQuality: quality(120_000, 19, 8) }),
+      item("impact", { experience: "Advanced", labels: ["help wanted"], discoveryTiers: ["high-impact"], repositoryQuality: quality(120_000, 19, 8) }),
       item("claimed", { status: "possibly-claimed" }),
     ]);
     expect(tiers.map((tier) => [tier.id, tier.items.map(({ item: entry }) => entry.id)])).toEqual([
-      ["beginner", ["beginner", "impact"]],
+      ["beginner", ["beginner"]],
       ["moderate", ["moderate"]],
       ["high-impact", ["impact"]],
     ]);

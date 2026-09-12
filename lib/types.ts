@@ -41,6 +41,7 @@ export type RepositoryQualityFactor = {
   earned: number | null;
   evidence: string;
   sampleSize?: number;
+  mergedCount?: number;
 };
 
 export type RepositoryQuality = {

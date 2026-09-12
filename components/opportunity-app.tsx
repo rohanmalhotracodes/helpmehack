@@ -77,7 +77,7 @@ function TopNav({ view, onNavigate, theme, onToggleTheme, onMenu }: { view: View
       <div className="mx-auto flex h-[61px] max-w-[1240px] items-center gap-4 px-3 sm:px-5">
         <button onClick={() => onNavigate("overlooked")} className="focus-ring flex shrink-0 items-center gap-2 rounded-lg" aria-label="HelpMeHack — open Overlooked">
           <Image src="/helpmehack-mark.png" width={34} height={34} priority alt="" className="h-[34px] w-[34px] rounded-lg" />
-          <span className="x-text hidden text-sm font-bold tracking-tight sm:block">helpmehack<span className="x-muted">.com</span></span>
+          <span className="x-text hidden text-sm font-bold tracking-tight sm:block">helpmehack</span>
         </button>
         <nav className="ml-auto hidden h-full items-center gap-1 sm:flex" aria-label="Primary navigation">
           <NavButton active={view === "overlooked"} onClick={() => onNavigate("overlooked")} icon={BookOpenText}>Overlooked</NavButton>

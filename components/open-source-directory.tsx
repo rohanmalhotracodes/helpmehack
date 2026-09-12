@@ -63,8 +63,8 @@ export function OpenSourceDirectory({ records, onOpenRepository }: {
         <summary className="focus-ring x-text flex cursor-pointer list-none items-center gap-2 rounded text-sm font-bold"><Info size={16} />How the ranking works</summary>
         <div className="x-muted mt-3 grid gap-4 text-xs leading-5 sm:grid-cols-3">
           <p><strong className="x-text block">Beginner-friendly</strong>38% issue suitability, 22% clarity, 20% onboarding, 12% newcomer evidence, and 8% visible availability.</p>
-          <p><strong className="x-text block">Moderate scope</strong>30% observed repository quality, 25% issue clarity, 20% maintenance, 15% review responsiveness, and 10% availability.</p>
-          <p><strong className="x-text block">High project signal</strong>42% public adoption, 23% reputation, 15% newcomer evidence, 12% maintenance, and 8% issue clarity. This is not a hiring promise.</p>
+          <p><strong className="x-text block">Experienced contributors</strong>30% observed repository quality, 25% issue clarity, 20% maintenance, 15% review responsiveness, and 10% availability.</p>
+          <p><strong className="x-text block">Major ecosystem projects</strong>42% public adoption, 23% reputation, 15% newcomer evidence, 12% maintenance, and 8% issue clarity. Beginner-labeled work is excluded from this tier; this is not a hiring promise.</p>
         </div>
         <p className="x-muted mt-4 text-xs leading-5">Repository quality is kept separate from issue availability. Merge evidence uses a disclosed 90-day public pull-request sample; if the sample is too small, the score is withheld rather than guessed.</p>
       </details>

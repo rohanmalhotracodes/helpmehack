@@ -64,7 +64,7 @@ export function scoreRepository(evidence: RepositoryEvidence): RepositoryQuality
     ? "Recent pull-request history could not be checked."
     : sampledNewcomers && sampledNewcomers.length >= 2
       ? `${sampledNewcomers.filter((pull) => pull.responded).length} of ${sampledNewcomers.length} sampled newcomer PRs received a human maintainer response; ${newcomerPulls.filter((pull) => pull.merged).length} of ${newcomerPulls.length} newcomer PRs merged in the 90-day window.`
-      : `Only ${sampledNewcomers?.length ?? 0} newcomer PR${sampledNewcomers?.length === 1 ? " was" : "s were"} available to inspect; at least 2 are required.`;
+      : `${newcomerPulls.filter((pull) => pull.merged).length} of ${newcomerPulls.length} newcomer PR${newcomerPulls.length === 1 ? "" : "s"} merged in the 90-day window; ${sampledNewcomers?.length ?? 0} had response evidence sampled, and at least 2 are required to score this factor.`;
 
   const externalPulls = evidence.recentPulls?.filter((pull) => pull.external && pull.responded !== undefined) ?? null;
   const responseEarned = externalPulls && externalPulls.length >= 3
@@ -97,7 +97,7 @@ export function scoreRepository(evidence: RepositoryEvidence): RepositoryQuality
     + (evidence.hasBeginnerIssues ? 3 : 0);
 
   const factors: RepositoryQualityFactor[] = [
-    { key: "newcomers", label: "Treatment of newcomers", weight: 30, earned: newcomerEarned, evidence: newcomerEvidence, sampleSize: sampledNewcomers?.length },
+    { key: "newcomers", label: "Treatment of newcomers", weight: 30, earned: newcomerEarned, evidence: newcomerEvidence, sampleSize: sampledNewcomers?.length, mergedCount: newcomerPulls?.filter((pull) => pull.merged).length },
     { key: "responsiveness", label: "Maintainer responsiveness", weight: 25, earned: responseEarned, evidence: responseEvidence, sampleSize: externalPulls?.length },
     { key: "reputation", label: "Reputation and adoption", weight: 20, earned: reputationEarned, evidence: `${evidence.stars.toLocaleString("en-US")} stars and ${evidence.forks.toLocaleString("en-US")} forks; both are log-scaled and capped. Independent usage was not separately verified.` },
     { key: "maintenance", label: "Current maintenance", weight: 15, earned: maintenanceEarned, evidence: evidence.recentPulls === null ? `Pull-request merge history could not be checked; last push ${Number.isFinite(pushedAge) ? `${Math.max(0, Math.round(pushedAge))}d ago` : "unknown"} and latest release ${Number.isFinite(releaseAge) ? `${Math.max(0, Math.round(releaseAge))}d ago` : "unknown"}.` : `${mergedCount} sampled PR${mergedCount === 1 ? "" : "s"} merged in 90 days; last push ${Number.isFinite(pushedAge) ? `${Math.max(0, Math.round(pushedAge))}d ago` : "unknown"}; latest release ${Number.isFinite(releaseAge) ? `${Math.max(0, Math.round(releaseAge))}d ago` : "unknown"}.` },
@@ -113,7 +113,7 @@ export function scoreRepository(evidence: RepositoryEvidence): RepositoryQuality
 export function scoreIssue(input: { body: string | null; title: string; labels: string[]; language: string | null; onboardingPoints: number; hasMaintainerDirection: boolean; blocked: boolean; repositoryScore: number | null }) {
   const body = input.body ?? "";
   const beginnerSuitability = Math.min(100,
-    (input.labels.some((label) => /good first issue|beginner|first-timers-only/i.test(label)) ? 35 : 0)
+    (input.labels.some((label) => /good first issue|beginner|first[-\s]timers?[-\s]only/i.test(label)) ? 35 : 0)
     + Math.round((input.onboardingPoints / 10) * 20)
     + (input.language ? 15 : 0)
     + (body.length >= 80 && body.length <= 5000 ? 15 : 5)

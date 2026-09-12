@@ -1,23 +1,21 @@
 import { isHumanMaintainerEvent, scoreIssue, scoreRepository, type PullObservation } from "./ranking";
+import { buildCatalogSearchGroups, isCatalogRepository, labelsForCatalogRepository, REPOSITORY_CATALOG } from "./repository-catalog";
 import type { AssignmentPolicy, AssignmentPolicyKind, AvailabilityStatus, Experience, Guidance, OpenSourceOpportunity, OpportunityPayload, RepositoryGuidance, RepositoryQuality, Source } from "./types";
 
 const API_ROOT = "https://api.github.com";
 const API_VERSION = "2026-03-10";
 const WINDOW_DAYS = 90;
-const MAX_ISSUES_PER_REPOSITORY = 2;
-const MAX_FEED_ISSUES = process.env.GITHUB_TOKEN ? 24 : 8;
-const MODERATE_REPOSITORIES = [
-  "oppia/oppia", "makeplane/plane", "zulip/zulip", "publiclab/plots2", "pallets/flask", "pallets/click", "jupyterlab/jupyterlab", "storybookjs/storybook", "openfoodfacts/openfoodfacts-server",
-];
-const HIGH_SIGNAL_REPOSITORIES = [
-  "microsoft/vscode", "kubernetes/kubernetes", "flutter/flutter", "facebook/react", "nodejs/node", "rust-lang/rust", "godotengine/godot", "freeCodeCamp/freeCodeCamp", "moby/moby", "ansible/ansible",
-];
+const MAX_ISSUES_PER_REPOSITORY = 1;
+const MAX_FEED_ISSUES = process.env.GITHUB_TOKEN ? 36 : 9;
 const CLAIM_PATTERN = /(?:\bi(?:'m| am|’m| would be| can| will|'ll|’ll| want to| would like to)\b.{0,45}\b(?:work|take|pick|handle|implement|fix)|\bassign (?:this to )?me\b|\/assign\b|\bworking on this\b)/i;
 const ASK_LABEL_PATTERN = /(?:discussion|needs approval|proposal|needs design|needs info)/i;
 const BLOCKED_LABEL_PATTERN = /(?:^|\b)(?:blocked|on hold|waiting)(?:$|\b)/i;
 const CLAIMED_LABEL_PATTERN = /(?:^|\b)(?:in progress|claimed|assigned)(?:$|\b)/i;
+const STALE_LABEL_PATTERN = /(?:^|[\s/:_-])(?:stale|awaiting[-_\s]+more[-_\s]+evidence)(?:$|[\s/:_-])/i;
+const NOT_ACTIONABLE_LABEL_PATTERN = /(?:^|[\s/:_-])(?:deprioritized|not[-_\s]+planned|wontfix|duplicate)(?:$|[\s/:_-])/i;
 const CLOSED_TO_CONTRIBUTIONS_PATTERN = /(?:not|no longer|isn['’]t|is not) (?:currently )?accepting (?:external |community )?contributions|closed to (?:external |community )?contributions/i;
 const PRACTICE_REPOSITORY_PATTERN = /(?:^|[-_ ])(?:first[-_ ]contributions?|contribution[-_ ]practice|git[-_ ]practice|practice[-_ ]repo|hello[-_ ]world)(?:$|[-_ ])/i;
+const DIRECTORY_REPOSITORY_PATTERN = /(?:^|[-_ ])(?:awesome|career|jobs?|interview|roadmap|boilerplate|template|tutorials?)(?:$|[-_ ])/i;
 const MAINTAINER_ROLES = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
 const historicalQualityCache = new Map<string, { value: RepositoryQuality; expiresAt: number }>();
 const conditionalJsonCache = new Map<string, { etag: string; value: unknown }>();
@@ -30,7 +28,7 @@ type GitHubIssue = {
 };
 type GitHubRepo = {
   full_name: string; name: string; description: string | null; html_url: string; language: string | null; owner: GitHubUser;
-  archived: boolean; disabled?: boolean; fork?: boolean; topics?: string[]; stargazers_count: number; forks_count: number; pushed_at: string | null;
+  archived: boolean; disabled?: boolean; fork?: boolean; topics?: string[]; stargazers_count: number; forks_count: number; pushed_at: string | null; created_at?: string;
 };
 type GitHubComment = { html_url: string; body: string | null; created_at: string; user: GitHubUser; author_association: string };
 type TimelineIssue = { html_url?: string; title?: string; body?: string | null; state?: string; draft?: boolean; pull_request?: { merged_at?: string | null } };
@@ -46,6 +44,7 @@ type GitHubPull = {
 };
 type GitHubRelease = { published_at: string | null };
 type SearchResponse = { items: GitHubIssue[] };
+type RepositorySearchResponse = { items: GitHubRepo[] };
 type FetchOptions = RequestInit & { next?: { revalidate: number; tags?: string[] } };
 type DiscoveryTier = NonNullable<OpenSourceOpportunity["discoveryTiers"]>[number];
 type Candidate = { issue: GitHubIssue; tiers: DiscoveryTier[] };
@@ -105,8 +104,14 @@ function cleanSummary(body: string | null, fallback: string) {
 function inferExperience(labels: string[]): Experience {
   const joined = labels.join(" ");
   if (/advanced|expert|complex|hard/i.test(joined)) return "Advanced";
-  if (/good first issue|beginner|easy|first-timers-only/i.test(joined)) return "Beginner";
+  if (/good first issue|beginner|easy|first[-\s]timers?[-\s]only/i.test(joined)) return "Beginner";
   return "Intermediate";
+}
+
+function experienceForIssue(labels: string[], tiers: DiscoveryTier[]): Experience {
+  const inferred = inferExperience(labels);
+  if (tiers.includes("high-impact") && inferred !== "Beginner") return "Advanced";
+  return inferred;
 }
 
 function extractCommands(...texts: Array<string | null | undefined>) {
@@ -226,7 +231,7 @@ function applyIssueGuidance(base: RepositoryGuidance, issue: GitHubIssue, commen
   return base;
 }
 
-async function buildRepositoryQuality(repo: GitHubRepo, guideText: string | null, readmeText: string | null, labels: string[], force: boolean, checkedAt: string): Promise<RepositoryQuality> {
+async function buildRepositoryQuality(repo: GitHubRepo, guideText: string | null, readmeText: string | null, labels: string[], force: boolean, checkedAt: string, deepQuality: boolean): Promise<RepositoryQuality> {
   const [pulls, latestRelease] = await Promise.all([
     getJson<GitHubPull[]>(`/repos/${repo.full_name}/pulls?state=all&sort=updated&direction=desc&per_page=30`, force, true),
     getJson<GitHubRelease>(`/repos/${repo.full_name}/releases/latest`, force, true),
@@ -239,7 +244,7 @@ async function buildRepositoryQuality(repo: GitHubRepo, guideText: string | null
   }) ?? null;
   const externalPulls = recentPulls?.filter((pull) => !isMaintainer(pull.author_association) && !isBot(pull.user)) ?? [];
   const newcomerPulls = externalPulls.filter((pull) => pull.author_association === "FIRST_TIMER" || pull.author_association === "FIRST_TIME_CONTRIBUTOR");
-  const sampleLimit = process.env.GITHUB_TOKEN ? 5 : 3;
+  const sampleLimit = deepQuality ? 3 : 0;
   const sample = [...newcomerPulls, ...externalPulls.filter((pull) => !newcomerPulls.includes(pull))].slice(0, sampleLimit);
   const observations = new Map<number, Pick<PullObservation, "responded" | "firstResponseHours">>();
   await Promise.all(sample.map(async (pull) => {
@@ -258,21 +263,23 @@ async function buildRepositoryQuality(repo: GitHubRepo, guideText: string | null
   return scoreRepository({
     checkedAt, stars: repo.stargazers_count ?? 0, forks: repo.forks_count ?? 0, pushedAt: repo.pushed_at, latestReleaseAt: latestRelease?.published_at ?? null,
     recentPulls: pullObservations, hasContributionGuide: Boolean(guideText), hasSetupInstructions: /(?:install|setup|getting started|development environment|prerequisites)/i.test(docs),
-    hasTestInstructions: /(?:npm test|pnpm test|yarn test|pytest|cargo test|go test|gradle.*test|testing)/i.test(docs), hasBeginnerIssues: labels.some((label) => /good first issue|beginner|first-timers-only/i.test(label)),
+    hasTestInstructions: /(?:npm test|pnpm test|yarn test|pytest|cargo test|go test|gradle.*test|testing)/i.test(docs), hasBeginnerIssues: labels.some((label) => /good first issue|beginner|first[-\s]timers?[-\s]only/i.test(label)),
   });
 }
 
-async function getRepositoryQuality(repo: GitHubRepo, guideText: string | null, readmeText: string | null, labels: string[], checkedAt: string, force: boolean) {
-  const cached = historicalQualityCache.get(repo.full_name);
+async function getRepositoryQuality(repo: GitHubRepo, guideText: string | null, readmeText: string | null, labels: string[], checkedAt: string, force: boolean, deepQuality: boolean) {
+  const cacheKey = `${repo.full_name}:${deepQuality ? "deep" : "feed"}`;
+  const cached = historicalQualityCache.get(cacheKey);
   if (!force && cached && Date.now() < cached.expiresAt) return cached.value;
-  const value = await buildRepositoryQuality(repo, guideText, readmeText, labels, force, checkedAt);
-  historicalQualityCache.set(repo.full_name, { value, expiresAt: Date.now() + 24 * 60 * 60_000 });
+  const value = await buildRepositoryQuality(repo, guideText, readmeText, labels, force, checkedAt, deepQuality);
+  historicalQualityCache.set(cacheKey, { value, expiresAt: Date.now() + 24 * 60 * 60_000 });
   return value;
 }
 
-async function getRepositoryContext(issue: GitHubIssue, labels: string[], force: boolean, checkedAt: string, cache: Map<string, Promise<RepositoryContext | null>>) {
+async function getRepositoryContext(issue: GitHubIssue, labels: string[], force: boolean, checkedAt: string, cache: Map<string, Promise<RepositoryContext | null>>, deepQuality: boolean) {
   const path = issue.repository_url.replace(`${API_ROOT}/repos/`, "");
-  if (!cache.has(path)) cache.set(path, (async () => {
+  const cacheKey = `${path}:${deepQuality ? "deep" : "feed"}`;
+  if (!cache.has(cacheKey)) cache.set(cacheKey, (async () => {
     const [repo, topLevelContributionFile, readmeFile, communityProfile] = await Promise.all([
       getJson<GitHubRepo>(issue.repository_url, false),
       getJson<ContentFile>(`/repos/${path}/contents/CONTRIBUTING.md`, false, true),
@@ -285,14 +292,20 @@ async function getRepositoryContext(issue: GitHubIssue, labels: string[], force:
     const guideText = decodeFile(contributionFile);
     const readmeText = decodeFile(readmeFile);
     if (CLOSED_TO_CONTRIBUTIONS_PATTERN.test(`${guideText ?? ""}\n${readmeText ?? ""}`)) return null;
-    const repositoryQuality = await getRepositoryQuality(repo, guideText, readmeText, labels, checkedAt, force);
+    const cataloged = isCatalogRepository(path);
+    const ageDays = repo.created_at ? (Date.parse(checkedAt) - Date.parse(repo.created_at)) / 86_400_000 : 0;
+    if (!cataloged && (repo.owner.type !== "Organization" || repo.stargazers_count < 10_000 || repo.forks_count < 500 || ageDays < 365 || !guideText || DIRECTORY_REPOSITORY_PATTERN.test(`${repo.name} ${repo.description ?? ""}`))) return null;
+    const repositoryQuality = await getRepositoryQuality(repo, guideText, readmeText, labels, checkedAt, force, deepQuality || !cataloged);
+    const maintenance = repositoryQuality.factors.find((factor) => factor.key === "maintenance")?.earned;
+    const newcomerMerges = repositoryQuality.factors.find((factor) => factor.key === "newcomers")?.mergedCount ?? 0;
+    if (!cataloged && ((!maintenance || maintenance <= 0) || newcomerMerges < 1)) return null;
     const repositoryGuidance = makeRepositoryGuidance(repo, guideText, readmeText, contributionFile, readmeFile, checkedAt);
     return { repo, contributionFile, guideText, readmeText, repositoryQuality, repositoryGuidance };
   })());
-  return cache.get(path)!;
+  return cache.get(cacheKey)!;
 }
 
-async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: string, repositoryCache: Map<string, Promise<RepositoryContext | null>>): Promise<OpenSourceOpportunity | null> {
+async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: string, repositoryCache: Map<string, Promise<RepositoryContext | null>>, deepQuality: boolean): Promise<OpenSourceOpportunity | null> {
   const { issue, tiers } = candidate;
   const path = issue.repository_url.replace(`${API_ROOT}/repos/`, "");
   const [owner, repoName] = path.split("/");
@@ -300,8 +313,8 @@ async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: stri
   const labels = labelNames(issue.labels);
   const repositoryLabels = tiers.includes("beginner") ? [...labels, "good first issue"] : labels;
   const [context, comments, timeline] = await Promise.all([
-    getRepositoryContext(issue, repositoryLabels, force, checkedAt, repositoryCache),
-    getJson<GitHubComment[]>(`${issue.comments_url}?per_page=30&sort=created&direction=desc`, force, true, false),
+    getRepositoryContext(issue, repositoryLabels, force, checkedAt, repositoryCache, deepQuality),
+    issue.comments > 0 ? getJson<GitHubComment[]>(`${issue.comments_url}?per_page=30&sort=created&direction=desc`, force, true, false) : Promise.resolve([]),
     getJson<TimelineEvent[]>(`/repos/${owner}/${repoName}/issues/${issue.number}/timeline?per_page=50`, force, true, false),
   ]).catch(() => [null, null, null] as const);
   if (!context) return null;
@@ -358,7 +371,7 @@ async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: stri
   return {
     id: `github-${issue.id}`, category: "open-source", owner, repo: repoName, avatar: repo.owner.avatar_url || initials(owner), issueNumber: issue.number,
     title: issue.title, summary: cleanSummary(issue.body, repo.description ?? "Open issue with a beginner-oriented label."), repositoryDescription: repo.description ?? undefined, keyRequirement, language: repo.language ?? "Unknown", languageColor: languageColors[repo.language ?? ""] ?? "#71717a",
-    labels: labels.slice(0, 4), experience: inferExperience(labels), status, statusDetail, checkedAt, updatedAt: issue.updated_at,
+    labels: labels.slice(0, 4), experience: experienceForIssue(labels, tiers), status, statusDetail, checkedAt, updatedAt: issue.updated_at,
     maintainerActivity: maintainerReplies ? `${maintainerReplies} human maintainer ${maintainerReplies === 1 ? "reply" : "replies"} in this issue` : undefined,
     activityWindow: maintainerReplies ? `${comments?.length ?? 0} fetched comments in the current issue thread` : undefined, caution, assignment: policy.detail,
     visibleClaims: recentClaim ? `Possible claim from @${recentClaim.user.login} on ${new Date(recentClaim.created_at).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" })}.` : `No claim language found in ${comments?.length ?? 0} fetched comments from the last 30 days. Automated detection can miss informal claims.`,
@@ -368,11 +381,14 @@ async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: stri
   };
 }
 
-function selectCandidates(items: GitHubIssue[], tier: DiscoveryTier, limit: number, maxPerRepository = MAX_ISSUES_PER_REPOSITORY): Candidate[] {
+function selectCandidates(items: GitHubIssue[], tier: DiscoveryTier, limit: number, maxPerRepository = MAX_ISSUES_PER_REPOSITORY, allowedRepositories?: ReadonlySet<string>): Candidate[] {
   const counts = new Map<string, number>();
   const selected: Candidate[] = [];
   for (const issue of items) {
-    if (issue.pull_request || issue.assignee) continue;
+    const repository = issue.repository_url.replace(`${API_ROOT}/repos/`, "").toLowerCase();
+    if (allowedRepositories && !allowedRepositories.has(repository)) continue;
+    const labels = labelNames(issue.labels);
+    if (issue.pull_request || issue.assignee || labels.some((label) => CLAIMED_LABEL_PATTERN.test(label) || BLOCKED_LABEL_PATTERN.test(label) || STALE_LABEL_PATTERN.test(label) || NOT_ACTIONABLE_LABEL_PATTERN.test(label))) continue;
     const count = counts.get(issue.repository_url) ?? 0;
     if (count >= maxPerRepository) continue;
     counts.set(issue.repository_url, count + 1);
@@ -382,22 +398,61 @@ function selectCandidates(items: GitHubIssue[], tier: DiscoveryTier, limit: numb
   return selected;
 }
 
-function mergeCandidatePools(pools: Candidate[][]) {
-  const merged = new Map<number, Candidate>();
-  for (const candidate of pools.flat()) {
-    const current = merged.get(candidate.issue.id);
-    if (!current) merged.set(candidate.issue.id, candidate);
-    else current.tiers = [...new Set([...current.tiers, ...candidate.tiers])];
+async function discoverEstablishedRepositories(force: boolean, checkedAt: string): Promise<Candidate[]> {
+  const pushedSince = new Date(Date.parse(checkedAt) - 90 * 86_400_000).toISOString().slice(0, 10);
+  const query = `archived:false fork:false stars:>=10000 pushed:>=${pushedSince} topic:good-first-issue`;
+  const result = await getJson<RepositorySearchResponse>(`/search/repositories?q=${encodeURIComponent(query)}&sort=updated&order=desc&per_page=30`, force, true);
+  const repositories = (result?.items ?? [])
+    .filter((repo) => !isCatalogRepository(repo.full_name) && !isPracticeRepository(repo) && !DIRECTORY_REPOSITORY_PATTERN.test(`${repo.name} ${repo.description ?? ""}`))
+    .slice(0, 16);
+  const issueGroups: Candidate[][] = [];
+  for (let index = 0; index < repositories.length; index += 4) {
+    const batch = await Promise.all(repositories.slice(index, index + 4).map(async (repo) => {
+      const base = `/repos/${repo.full_name}/issues?state=open&sort=updated&direction=desc&per_page=30&labels=`;
+      const [beginner, moderate] = await Promise.all([
+        getJson<GitHubIssue[]>(`${base}${encodeURIComponent("good first issue")}`, force, true).catch(() => null),
+        getJson<GitHubIssue[]>(`${base}${encodeURIComponent("help wanted")}`, force, true).catch(() => null),
+      ]);
+      const recent = (issues: GitHubIssue[] | null) => (issues ?? []).filter((issue) => Date.parse(issue.updated_at) >= Date.parse(checkedAt) - 365 * 86_400_000);
+      return [
+        ...selectCandidates(recent(beginner), "beginner", 1, 1),
+        ...selectCandidates(recent(moderate), "moderate", 1, 1),
+      ].slice(0, 1);
+    }));
+    issueGroups.push(...batch);
   }
-  return [...merged.values()].slice(0, MAX_FEED_ISSUES);
+  return issueGroups.flat();
 }
 
-async function enrichCandidates(candidates: Candidate[], force: boolean, checkedAt: string) {
+function mergeCandidatePools(pools: Candidate[][], maxPerRepository = MAX_FEED_ISSUES) {
+  const merged = new Map<number, Candidate>();
+  const repositoryCounts = new Map<string, number>();
+  const queues = pools.map((pool) => [...pool]);
+  while (merged.size < MAX_FEED_ISSUES && queues.some((queue) => queue.length)) {
+    for (const queue of queues) {
+      const candidate = queue.shift();
+      if (!candidate) continue;
+      const current = merged.get(candidate.issue.id);
+      if (current) {
+        current.tiers = [...new Set([...current.tiers, ...candidate.tiers])];
+      } else {
+        const repositoryCount = repositoryCounts.get(candidate.issue.repository_url) ?? 0;
+        if (repositoryCount >= maxPerRepository) continue;
+        repositoryCounts.set(candidate.issue.repository_url, repositoryCount + 1);
+        merged.set(candidate.issue.id, candidate);
+      }
+      if (merged.size >= MAX_FEED_ISSUES) break;
+    }
+  }
+  return [...merged.values()];
+}
+
+async function enrichCandidates(candidates: Candidate[], force: boolean, checkedAt: string, deepQuality: boolean) {
   const records: OpenSourceOpportunity[] = [];
   const repositoryCache = new Map<string, Promise<RepositoryContext | null>>();
-  const concurrency = process.env.GITHUB_TOKEN ? 4 : 2;
+  const concurrency = process.env.GITHUB_TOKEN ? 8 : 2;
   for (let index = 0; index < candidates.length; index += concurrency) {
-    const batch = await Promise.all(candidates.slice(index, index + concurrency).map((candidate) => enrichIssue(candidate, force, checkedAt, repositoryCache)));
+    const batch = await Promise.all(candidates.slice(index, index + concurrency).map((candidate) => enrichIssue(candidate, force, checkedAt, repositoryCache, deepQuality)));
     for (const item of batch) if (item?.eligibleForDefault) records.push(item);
   }
   return records;
@@ -410,21 +465,31 @@ export class GitHubOpportunityProvider {
 
   async getAll(force = false): Promise<OpportunityPayload> {
     if (!force && this.cachedPayload && Date.now() < this.cacheExpiresAt) return this.cachedPayload;
-    const updatedSince = new Date(Date.now() - 180 * 86_400_000).toISOString().slice(0, 10);
+    const updatedSince = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10);
     const authenticated = Boolean(process.env.GITHUB_TOKEN);
-    const searches: Array<{ tier: DiscoveryTier; limit: number; query: string }> = [
-      { tier: "beginner", limit: authenticated ? 6 : 2, query: `is:issue is:open archived:false no:assignee updated:>=${updatedSince} label:"good first issue"` },
-      { tier: "moderate", limit: authenticated ? 6 : 2, query: `is:issue is:open archived:false no:assignee updated:>=${updatedSince} label:"help wanted" ${MODERATE_REPOSITORIES.map((repo) => `repo:${repo}`).join(" ")}` },
-      { tier: "moderate", limit: authenticated ? 4 : 1, query: `is:issue is:open archived:false no:assignee updated:>=${updatedSince} label:"good first issue" ${MODERATE_REPOSITORIES.map((repo) => `repo:${repo}`).join(" ")}` },
-      { tier: "high-impact", limit: authenticated ? 4 : 1, query: `is:issue is:open archived:false no:assignee updated:>=${updatedSince} label:"good first issue" ${HIGH_SIGNAL_REPOSITORIES.map((repo) => `repo:${repo}`).join(" ")}` },
-      { tier: "high-impact", limit: authenticated ? 4 : 1, query: `is:issue is:open archived:false no:assignee updated:>=${updatedSince} label:"help wanted" ${HIGH_SIGNAL_REPOSITORIES.map((repo) => `repo:${repo}`).join(" ")}` },
-    ];
-    const responses = await Promise.all(searches.map(({ query }) => githubFetch(`/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc&per_page=50`, force)));
+    const allGroups = buildCatalogSearchGroups(REPOSITORY_CATALOG);
+    const catalogSearches = (authenticated
+      ? allGroups
+      : (["beginner", "moderate", "high-impact"] as const).flatMap((tier) => allGroups.filter((group) => group.tier === tier).slice(0, 2)))
+      .map((group) => ({
+        ...group,
+        limit: group.repositories.length,
+        query: `is:issue is:open archived:false no:assignee updated:>=${updatedSince} label:"${group.label}" ${group.repositories.map((repo) => `repo:${repo}`).join(" ")}`,
+      }));
+    const searches = catalogSearches;
+    const responses = await Promise.all(searches.map(({ query }) => githubFetch(`/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc&per_page=50`, force).catch(() => new Response(null, { status: 503 }))));
     if (responses.every((response) => !response.ok)) throw new Error(`GitHub searches failed with ${responses.map((response) => response.status).join(", ")}.`);
     const data = await Promise.all(responses.map(async (response): Promise<SearchResponse> => response.ok ? response.json() as Promise<SearchResponse> : { items: [] }));
-    const candidates = mergeCandidatePools(data.map((result, index) => selectCandidates(result.items, searches[index].tier, searches[index].limit)));
     const checkedAt = new Date().toISOString();
-    const records = await enrichCandidates(candidates, force, checkedAt);
+    const discovered = authenticated ? await discoverEstablishedRepositories(force, checkedAt).catch(() => []) : [];
+    const candidates = mergeCandidatePools([...data.map((result, index) => selectCandidates(
+      result.items,
+      searches[index].tier,
+      searches[index].limit,
+      1,
+      searches[index].repositories.length ? new Set(searches[index].repositories.map((repo) => repo.toLowerCase())) : undefined,
+    )), discovered], 1);
+    const records = await enrichCandidates(candidates, force, checkedAt, false);
     if (!records.length) throw new Error("GitHub returned no eligible issue records after availability checks.");
     const rateResponse = responses.find((response) => response.ok) ?? responses[0];
     const remaining = Number(rateResponse.headers.get("x-ratelimit-remaining") ?? "0");
@@ -441,17 +506,15 @@ export class GitHubOpportunityProvider {
 export async function getRepositoryOpportunityData(owner: string, repo: string, requestedTiers: DiscoveryTier[] = []): Promise<OpportunityPayload> {
   if (!/^[a-z0-9_.-]{1,100}$/i.test(owner) || !/^[a-z0-9_.-]{1,100}$/i.test(repo)) throw new Error("Invalid repository name.");
   const path = `/repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=30&labels=`;
-  const [beginnerIssues, helpWantedIssues] = await Promise.all([
-    getJson<GitHubIssue[]>(`${path}${encodeURIComponent("good first issue")}`, false),
-    getJson<GitHubIssue[]>(`${path}${encodeURIComponent("help wanted")}`, false),
-  ]);
+  const discoveryLabels = [...new Set(["good first issue", "help wanted", ...labelsForCatalogRepository(`${owner}/${repo}`)])];
+  const issueGroups = await Promise.all(discoveryLabels.map((label) => getJson<GitHubIssue[]>(`${path}${encodeURIComponent(label)}`, false)));
   const addTiers = (items: Candidate[], tiers: DiscoveryTier[]) => items.map((candidate) => ({ ...candidate, tiers: [...new Set([...candidate.tiers, ...tiers])] }));
-  const candidates = mergeCandidatePools([
-    addTiers(selectCandidates(beginnerIssues ?? [], "beginner", 7, 7), requestedTiers),
-    addTiers(selectCandidates(helpWantedIssues ?? [], "moderate", 7, 7), requestedTiers),
-  ]).slice(0, 12);
+  const candidates = mergeCandidatePools(issueGroups.map((issues, index) => addTiers(
+    selectCandidates(issues ?? [], /good first|first[-\s]timers?|beginner|easy/i.test(discoveryLabels[index]) ? "beginner" : "moderate", 7, 7),
+    requestedTiers,
+  ))).slice(0, 12);
   const checkedAt = new Date().toISOString();
-  const records = await enrichCandidates(candidates, false, checkedAt);
+  const records = await enrichCandidates(candidates, false, checkedAt, true);
   return {
     records,
     checkedAt,
@@ -463,3 +526,4 @@ export async function getRepositoryOpportunityData(owner: string, repo: string, 
 
 export { closesIssue as referencesIssueWithClosingKeyword, policySignal as detectAssignmentPolicySignal };
 export const isClaimedWorkLabel = (label: string) => CLAIMED_LABEL_PATTERN.test(label);
+export const isStaleWorkLabel = (label: string) => STALE_LABEL_PATTERN.test(label);
