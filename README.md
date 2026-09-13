@@ -53,7 +53,7 @@ An overall repository score is withheld unless all five factors have sufficient 
 
 - Beginner-friendly: 38% beginner suitability, 22% clarity, 20% onboarding, 12% newcomer evidence, 8% availability.
 - Experienced contributors: 30% repository quality, 25% clarity, 20% maintenance, 15% responsiveness, 10% availability.
-- Major ecosystem projects: 42% log-scaled public adoption, 23% reputation, 15% newcomer evidence, 12% maintenance, 8% clarity. This tier requires an explicit major-project discovery match, current maintenance evidence, and non-beginner scope.
+- Widely adopted projects: 42% log-scaled public adoption, 23% reputation, 15% newcomer evidence, 12% maintenance, 8% clarity. This tier requires an explicit major-project discovery match, current maintenance evidence, and non-beginner scope.
 
 Major ecosystem project signal is evidence about the codebase and the public verifiability of a contribution, not a hiring or resume-outcome promise. The main directory uses at most one issue per repository so a single busy project cannot consume the carousel. Opening a repository performs the deeper issue fetch.
 

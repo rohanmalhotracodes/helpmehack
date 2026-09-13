@@ -18,7 +18,7 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
   const [activeRepository, setActiveRepository] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const saved = useLocalList("helpmehack:saved");
-  const followed = useLocalList("helpmehack:followed");
+  const savedRepositories = useLocalList("helpmehack:saved-repositories");
   const records = useMemo(() => payload.records.filter((item): item is OpenSourceOpportunity => item.category === "open-source"), [payload.records]);
   const activeItems = useMemo(() => records.filter((item) => `${item.owner}/${item.repo}` === activeRepository && ["unassigned", "ask-first", "unknown"].includes(item.status)), [activeRepository, records]);
   const closeRepository = useCallback(() => setActiveRepository(null), []);
@@ -59,14 +59,18 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
       <TopNav view={view} onNavigate={navigate} theme={theme} onToggleTheme={toggleTheme} onMenu={() => setMenuOpen(true)} />
       {view === "overlooked"
         ? <OverlookedFeed onOpenSource={() => navigate("open-source")} />
-        : <OpenSourceDirectory records={records} onOpenRepository={setActiveRepository} />}
+        : <OpenSourceDirectory records={records} savedRepositoryIds={savedRepositories.items} savedIssueIds={saved.items} onSaveRepository={savedRepositories.toggle} onOpenRepository={setActiveRepository} />}
 
       <footer className="x-muted mx-auto flex max-w-[1240px] flex-col gap-2 px-5 py-8 text-center text-[11px] sm:flex-row sm:items-center sm:justify-between sm:text-left">
-        <p>© 2026 HelpMeHack · Public evidence, clearly labeled.</p>
+        <p>© 2026 HelpMeHack</p>
       </footer>
 
       {menuOpen && <MobileNav view={view} onNavigate={navigate} onClose={() => setMenuOpen(false)} />}
-      {activeRepository && activeItems.length > 0 && <RepositoryPanel key={activeRepository} initialItems={activeItems} savedIds={saved.items} followed={followed.items.includes(activeRepository)} onSave={saved.toggle} onFollow={() => followed.toggle(activeRepository)} onClose={closeRepository} />}
+      {activeRepository && activeItems.length > 0 && <RepositoryPanel key={activeRepository} initialItems={activeItems} savedIds={saved.items} repositorySaved={savedRepositories.items.includes(activeRepository)} onSave={(id) => {
+        const addingIssue = !saved.items.includes(id);
+        saved.toggle(id);
+        if (addingIssue && !savedRepositories.items.includes(activeRepository)) savedRepositories.toggle(activeRepository);
+      }} onSaveRepository={() => savedRepositories.toggle(activeRepository)} onClose={closeRepository} />}
     </div>
   );
 }

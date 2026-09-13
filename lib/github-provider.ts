@@ -48,13 +48,26 @@ type SearchResponse = { items: GitHubIssue[] };
 type RepositorySearchResponse = { items: GitHubRepo[] };
 type FetchOptions = RequestInit & { next?: { revalidate: number; tags?: string[] } };
 type DiscoveryTier = NonNullable<OpenSourceOpportunity["discoveryTiers"]>[number];
-type Candidate = { issue: GitHubIssue; tiers: DiscoveryTier[] };
+type Candidate = { issue: GitHubIssue; tiers: DiscoveryTier[]; matchingIssueCount: number };
 type RepositoryContext = { repo: GitHubRepo; contributionFile: ContentFile | null; guideText: string | null; readmeText: string | null; repositoryQuality: RepositoryQuality; repositoryGuidance: RepositoryGuidance };
 
 const languageColors: Record<string, string> = {
   TypeScript: "#3178c6", JavaScript: "#f1e05a", Python: "#3572a5", Rust: "#dea584", Go: "#00add8", Java: "#b07219",
   Ruby: "#701516", PHP: "#4f5d95", Kotlin: "#a97bff", Swift: "#f05138", C: "#555555", "C++": "#f34b7d", "C#": "#178600", Shell: "#89e051",
 };
+
+const technologyNames: Record<string, string> = {
+  android: "Android", angular: "Angular", astro: "Astro", django: "Django", dotnet: ".NET", flask: "Flask", flutter: "Flutter",
+  godot: "Godot", java: "Java", javascript: "JavaScript", kubernetes: "Kubernetes", llvm: "LLVM", nextjs: "Next.js", "next-js": "Next.js",
+  nodejs: "Node.js", "node-js": "Node.js", php: "PHP", python: "Python", rails: "Rails", react: "React", ruby: "Ruby", rust: "Rust",
+  svelte: "Svelte", typescript: "TypeScript", vue: "Vue",
+};
+
+function repositoryTechnologies(repo: GitHubRepo) {
+  const values = [repo.language, ...(repo.topics ?? []).map((topic) => technologyNames[topic.toLowerCase()]).filter(Boolean)]
+    .filter((value): value is string => Boolean(value));
+  return [...new Set(values)].slice(0, 6);
+}
 
 async function headers(forceAuthRefresh = false) {
   const value: Record<string, string> = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": API_VERSION, "User-Agent": "helpmehack.com" };
@@ -146,8 +159,8 @@ function closesIssue(body: string | null | undefined, owner: string, repo: strin
 function policySignal(text: string | null | undefined): AssignmentPolicyKind | null {
   if (!text) return null;
   if (/(?:must|need(?:s)? to|required to|please)\s+(?:be\s+)?assign|request assignment|\/assign\b/i.test(text)) return "assignment-required";
-  if (/discuss (?:the |your )?(?:approach|proposal)|(?:approval|maintainer confirmation) (?:is )?required|before (?:you )?(?:start|begin|work|implement)/i.test(text)) return "approval-required";
-  if (/no (?:need|requirement) (?:for|to request) assignment|assignment (?:is )?not required|feel free to (?:open|submit|work|start)|pull requests? welcome/i.test(text)) return "direct";
+  if (/(?:discuss|propose|describe|share) (?:the |your )?(?:approach|proposal|solution).{0,80}(?:before|prior to) (?:you )?(?:start|begin|implement|submit)|(?:approval|maintainer confirmation) (?:is )?required (?:before|prior to)|(?:wait for|receive|obtain) (?:maintainer )?(?:approval|confirmation) (?:before|prior to)/i.test(text)) return "approval-required";
+  if (/no (?:need|requirement) (?:for|to request) assignment|assignment (?:is )?not required|(?:you may|feel free to) (?:start working|begin implementation) without (?:an )?assignment/i.test(text)) return "direct";
   return null;
 }
 
@@ -182,13 +195,23 @@ function makePolicy(issue: GitHubIssue, comments: GitHubComment[] | null, guideT
 
 function makeRepositoryGuidance(repo: GitHubRepo, guideText: string | null, readmeText: string | null, contributionFile: ContentFile | null, readmeFile: ContentFile | null, checkedAt: string): RepositoryGuidance {
   const docs = `${guideText ?? ""}\n${readmeText ?? ""}`;
-  const signal = policySignal(docs);
-  const botClaim = docs.match(/(@[a-z0-9_-]*bot)\s+(claim|assign)\b/i);
-  const source: Source = contributionFile?.html_url
-    ? { label: "CONTRIBUTING.md", href: contributionFile.html_url, kind: "guide" }
-    : readmeFile?.html_url
-      ? { label: "README", href: readmeFile.html_url, kind: "guide" }
-      : { label: `${repo.full_name} repository`, href: repo.html_url, kind: "official" };
+  const guideSignal = policySignal(guideText);
+  const readmeSignal = policySignal(readmeText);
+  const signal = guideSignal ?? readmeSignal;
+  const guideBotClaim = guideText?.match(/(@[a-z0-9_-]*bot)\s+(claim|assign)\b/i);
+  const readmeBotClaim = readmeText?.match(/(@[a-z0-9_-]*bot)\s+(claim|assign)\b/i);
+  const botClaim = guideBotClaim ?? readmeBotClaim;
+  const contributionSource: Source | undefined = contributionFile?.html_url ? { label: "CONTRIBUTING.md", href: contributionFile.html_url, kind: "guide" } : undefined;
+  const readmeSource: Source | undefined = readmeFile?.html_url ? { label: "README", href: readmeFile.html_url, kind: "guide" } : undefined;
+  const source = guideBotClaim
+    ? contributionSource
+    : readmeBotClaim
+      ? readmeSource
+      : guideSignal
+        ? contributionSource
+        : readmeSignal
+          ? readmeSource
+          : contributionSource ?? readmeSource ?? { label: `${repo.full_name} repository`, href: repo.html_url, kind: "official" as const };
   const assignment = botClaim
     ? `Use \`${botClaim[1]} ${botClaim[2].toLowerCase()}\` in the issue thread; do not rely on a plain “I’m working on this” comment.`
     : signal === "assignment-required"
@@ -197,18 +220,19 @@ function makeRepositoryGuidance(repo: GitHubRepo, guideText: string | null, read
         ? "Discuss the approach and wait for maintainer approval before starting implementation."
         : signal === "direct"
           ? "The repository documentation allows direct contributions; recheck the issue for competing work first."
-          : "No repository-wide assignment rule was detected. Follow the current issue’s instructions before starting.";
+          : "No assignment rule was confirmed in the checked repository documentation. Open an issue below and follow its current instructions before starting.";
   const beforeStarting = [
-    contributionFile ? "Read the linked contribution guide before changing code." : "Read the repository README and issue template before changing code.",
-    /(?:install|setup|getting started|development environment|prerequisites)/i.test(docs) ? "Complete the documented development setup first." : "Confirm the development setup from repository documentation.",
-    /(?:npm test|pnpm test|yarn test|pytest|cargo test|go test|gradle.*test|testing)/i.test(docs) ? "Run the documented checks for the area you change." : "Confirm the expected tests in the issue or with a maintainer.",
-  ];
+    contributionFile ? "Read the linked contribution guide before changing code." : readmeFile ? "Read the linked README before changing code." : null,
+    /(?:install|setup|getting started|development environment|prerequisites)/i.test(docs) ? "Complete the documented development setup first." : null,
+    /(?:npm test|pnpm test|yarn test|pytest|cargo test|go test|gradle.*test|testing)/i.test(docs) ? "Run the documented checks for the area you change." : null,
+  ].filter((point): point is string => Boolean(point));
+  if (beforeStarting.length <= 1) beforeStarting.push("No setup or test requirement was safely extracted; verify the linked documentation for your change.");
   const avoid = signal === "assignment-required"
     ? ["Do not begin implementation before assignment is confirmed.", "Do not expand the issue’s scope without maintainer agreement."]
     : signal === "approval-required"
       ? ["Do not submit an implementation before the proposed approach is approved.", "Do not mix unrelated cleanup into the contribution."]
-      : ["Do not assume an unassigned issue is unclaimed; check recent comments and linked pull requests.", "Do not mix unrelated cleanup into the contribution."];
-  return { assignment, beforeStarting, avoid, source, checkedAt };
+      : ["No repository-specific prohibition was safely extracted. Recheck the selected issue for current instructions and competing work."];
+  return { assignment, assignmentEvidence: signal || botClaim ? "documented" : "not-found", beforeStarting, avoid, source, checkedAt };
 }
 
 function applyIssueGuidance(base: RepositoryGuidance, issue: GitHubIssue, comments: GitHubComment[] | null): RepositoryGuidance {
@@ -224,7 +248,22 @@ function applyIssueGuidance(base: RepositoryGuidance, issue: GitHubIssue, commen
     return {
       ...base,
       assignment: `Comment \`${botCommand[1]} ${botCommand[2].toLowerCase()}\` on the issue and wait for the bot or maintainers to confirm the claim before coding.`,
+      assignmentEvidence: "issue-specific",
       source: botInstruction.source,
+    };
+  }
+  const policyInstruction = evidence.map((entry) => ({ ...entry, signal: policySignal(entry.text) })).find((entry) => entry.signal);
+  if (policyInstruction) {
+    const assignmentByKind: Partial<Record<AssignmentPolicyKind, string>> = {
+      "assignment-required": "The current issue asks contributors to request assignment and wait for confirmation before coding.",
+      "approval-required": "The current issue asks contributors to discuss the approach and receive confirmation before coding.",
+      direct: "The current issue explicitly says formal assignment is not required. Recheck for competing work before starting.",
+    };
+    return {
+      ...base,
+      assignment: assignmentByKind[policyInstruction.signal!] ?? base.assignment,
+      assignmentEvidence: "issue-specific",
+      source: policyInstruction.source,
     };
   }
   const gatedSubmission = evidence.find(({ text }) => /(?:do not|don['’]t|please avoid)\s+(?:open|submit|create)\s+(?:a\s+)?(?:pull request|pr|solution|implementation)/i.test(text ?? ""));
@@ -377,7 +416,7 @@ async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: stri
 
   return {
     id: `github-${issue.id}`, category: "open-source", owner, repo: repoName, avatar: repo.owner.avatar_url || initials(owner), issueNumber: issue.number,
-    title: issue.title, summary: cleanSummary(issue.body, repo.description ?? "Open issue with a beginner-oriented label."), repositoryDescription: repo.description ?? undefined, keyRequirement, language: repo.language ?? "Unknown", languageColor: languageColors[repo.language ?? ""] ?? "#71717a",
+    title: issue.title, summary: cleanSummary(issue.body, repo.description ?? "Open issue with a beginner-oriented label."), repositoryDescription: repo.description ?? undefined, keyRequirement, language: repo.language ?? "Unknown", languageColor: languageColors[repo.language ?? ""] ?? "#71717a", technologies: repositoryTechnologies(repo), matchingIssueCount: candidate.matchingIssueCount,
     labels: labels.slice(0, 4), experience: experienceForIssue(labels, tiers), status, statusDetail, checkedAt, updatedAt: issue.updated_at,
     maintainerActivity: maintainerReplies ? `${maintainerReplies} human maintainer ${maintainerReplies === 1 ? "reply" : "replies"} in this issue` : undefined,
     activityWindow: maintainerReplies ? `${comments?.length ?? 0} fetched comments in the current issue thread` : undefined, caution, assignment: policy.detail,
@@ -389,17 +428,23 @@ async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: stri
 }
 
 function selectCandidates(items: GitHubIssue[], tier: DiscoveryTier, limit: number, maxPerRepository = MAX_ISSUES_PER_REPOSITORY, allowedRepositories?: ReadonlySet<string>): Candidate[] {
+  const eligible = items.filter((issue) => {
+    const repository = issue.repository_url.replace(`${API_ROOT}/repos/`, "").toLowerCase();
+    const labels = labelNames(issue.labels);
+    return (!allowedRepositories || allowedRepositories.has(repository))
+      && !issue.pull_request
+      && !issue.assignee
+      && !labels.some((label) => CLAIMED_LABEL_PATTERN.test(label) || BLOCKED_LABEL_PATTERN.test(label) || STALE_LABEL_PATTERN.test(label) || NOT_ACTIONABLE_LABEL_PATTERN.test(label));
+  });
+  const matchingCounts = new Map<string, number>();
+  for (const issue of eligible) matchingCounts.set(issue.repository_url, (matchingCounts.get(issue.repository_url) ?? 0) + 1);
   const counts = new Map<string, number>();
   const selected: Candidate[] = [];
-  for (const issue of items) {
-    const repository = issue.repository_url.replace(`${API_ROOT}/repos/`, "").toLowerCase();
-    if (allowedRepositories && !allowedRepositories.has(repository)) continue;
-    const labels = labelNames(issue.labels);
-    if (issue.pull_request || issue.assignee || labels.some((label) => CLAIMED_LABEL_PATTERN.test(label) || BLOCKED_LABEL_PATTERN.test(label) || STALE_LABEL_PATTERN.test(label) || NOT_ACTIONABLE_LABEL_PATTERN.test(label))) continue;
+  for (const issue of eligible) {
     const count = counts.get(issue.repository_url) ?? 0;
     if (count >= maxPerRepository) continue;
     counts.set(issue.repository_url, count + 1);
-    selected.push({ issue, tiers: [tier] });
+    selected.push({ issue, tiers: [tier], matchingIssueCount: matchingCounts.get(issue.repository_url) ?? 1 });
     if (selected.length >= limit) break;
   }
   return selected;
@@ -442,6 +487,7 @@ function mergeCandidatePools(pools: Candidate[][], maxPerRepository = MAX_FEED_I
       const current = merged.get(candidate.issue.id);
       if (current) {
         current.tiers = [...new Set([...current.tiers, ...candidate.tiers])];
+        current.matchingIssueCount = Math.max(current.matchingIssueCount, candidate.matchingIssueCount);
       } else {
         const repositoryCount = repositoryCounts.get(candidate.issue.repository_url) ?? 0;
         if (repositoryCount >= maxPerRepository) continue;

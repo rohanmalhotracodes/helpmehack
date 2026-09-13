@@ -5,12 +5,12 @@ import { ArrowUpRight, Bookmark, CheckCircle2, ExternalLink, GitFork, LoaderCirc
 import type { OpenSourceOpportunity, OpportunityPayload } from "@/lib/types";
 import { Avatar } from "./ui";
 
-export function RepositoryPanel({ initialItems, savedIds, followed, onSave, onFollow, onClose }: {
+export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSave, onSaveRepository, onClose }: {
   initialItems: OpenSourceOpportunity[];
   savedIds: string[];
-  followed: boolean;
+  repositorySaved: boolean;
   onSave: (id: string) => void;
-  onFollow: () => void;
+  onSaveRepository: () => void;
   onClose: () => void;
 }) {
   const [items, setItems] = useState(initialItems);
@@ -78,19 +78,19 @@ export function RepositoryPanel({ initialItems, savedIds, followed, onSave, onFo
         <div className="flex-1 overflow-y-auto">
           <section className="x-border border-b px-4 py-5 sm:px-6" aria-labelledby="before-issues-title">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-              <div><p className="x-muted text-xs font-semibold uppercase tracking-[.12em]">Contribution brief</p><h3 id="before-issues-title" className="x-text mt-1 text-lg font-bold">Read this before choosing an issue</h3>{first.repositoryDescription && <p className="x-muted mt-2 max-w-3xl text-sm leading-5">{first.repositoryDescription}</p>}</div>
-              <button onClick={onFollow} aria-pressed={followed} className={`focus-ring inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-full border px-4 text-xs font-bold ${followed ? "x-primary border-transparent" : "x-border x-text hover:bg-[var(--surface-raised)]"}`}><GitFork size={14} />{followed ? "Following" : "Follow repository"}</button>
+              <div><h3 id="before-issues-title" className="x-text text-lg font-bold">Read this before choosing an issue</h3>{first.repositoryDescription && <p className="x-muted mt-2 max-w-3xl text-sm leading-5">{first.repositoryDescription}</p>}</div>
+              <button onClick={onSaveRepository} aria-pressed={repositorySaved} className={`focus-ring inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-full border px-4 text-xs font-bold ${repositorySaved ? "x-primary border-transparent" : "x-border x-text hover:bg-[var(--surface-raised)]"}`}><Bookmark size={14} fill={repositorySaved ? "currentColor" : "none"} />{repositorySaved ? "Saved" : "Save repository"}</button>
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-3">
-              <GuidanceCard title="How to get assigned" icon={CheckCircle2}><p>{guidance?.assignment ?? "No repository-wide assignment rule was detected. Follow the current issue instructions before starting."}</p></GuidanceCard>
+              <GuidanceCard title="How to get assigned" icon={CheckCircle2} badge={guidance?.assignmentEvidence === "documented" ? "Documented rule" : guidance?.assignmentEvidence === "issue-specific" ? "Current issue evidence" : "No rule confirmed"}><p>{guidance?.assignment ?? "No assignment rule was confirmed. Open the issue and follow its current instructions before starting."}</p></GuidanceCard>
               <GuidanceCard title="Before you code" icon={GitFork}><ul className="space-y-1.5">{(guidance?.beforeStarting ?? first.setup.slice(0, 3)).map((point) => <li key={point}>• {point}</li>)}</ul></GuidanceCard>
               <GuidanceCard title="What not to do" icon={ShieldAlert}><ul className="space-y-1.5">{(guidance?.avoid ?? [first.caution]).map((point) => <li key={point}>• {point}</li>)}</ul></GuidanceCard>
             </div>
-            {guidance?.source && <p className="x-muted mt-3 text-[11px]">Based on checked source evidence · <a href={guidance.source.href} target="_blank" rel="noreferrer" className="focus-ring underline underline-offset-2">{guidance.source.label}</a> · checked {formatDate(guidance.checkedAt)}</p>}
+            {guidance?.source && <p className="x-muted mt-3 text-[11px]">{guidance.assignmentEvidence === "not-found" ? "Files checked" : "Assignment guidance source"} · <a href={guidance.source.href} target="_blank" rel="noreferrer" className="focus-ring underline underline-offset-2">{guidance.source.label}</a> · checked {formatDate(guidance.checkedAt)}</p>}
           </section>
 
           <section aria-labelledby="issues-title">
-            <div className="x-border flex items-center justify-between border-b px-4 py-3 sm:px-6"><div><h3 id="issues-title" className="x-text text-sm font-bold">Open for contribution</h3><p className="x-muted mt-0.5 text-[11px]">{items.length} checked {items.length === 1 ? "issue" : "issues"}</p></div>{state === "loading" && <span className="x-muted flex items-center gap-2 text-xs"><LoaderCircle size={14} className="animate-spin" />Checking more issues…</span>}{state === "error" && <span className="text-amber-400 text-xs">Showing the last available snapshot</span>}</div>
+            <div className="x-border flex items-center justify-between border-b px-4 py-3 sm:px-6"><div><h3 id="issues-title" className="x-text text-sm font-bold">Open for contribution</h3><p className="x-muted mt-0.5 text-[11px]">{state === "loading" ? "Checking available issues…" : `${items.length} available contribution ${items.length === 1 ? "issue" : "issues"}`}</p></div>{state === "loading" && <span className="x-muted flex items-center gap-2 text-xs"><LoaderCircle size={14} className="animate-spin" />Checking repository…</span>}{state === "error" && <span className="text-amber-400 text-xs">Showing the last available snapshot</span>}</div>
             <div className="divide-y" aria-live="polite">
               {items.map((item) => <IssueRow key={item.id} item={item} saved={savedIds.includes(item.id)} onSave={() => onSave(item.id)} />)}
               {!items.length && <p className="x-muted px-6 py-12 text-center text-sm">No currently verified issues were found for this repository.</p>}
@@ -102,12 +102,12 @@ export function RepositoryPanel({ initialItems, savedIds, followed, onSave, onFo
   );
 }
 
-function GuidanceCard({ title, icon: Icon, children }: { title: string; icon: typeof GitFork; children: React.ReactNode }) {
-  return <div className="x-border x-raised rounded-xl border p-3"><h4 className="x-text flex items-center gap-2 text-xs font-bold"><Icon size={14} />{title}</h4><div className="x-muted mt-2 text-xs leading-5">{children}</div></div>;
+function GuidanceCard({ title, icon: Icon, badge, children }: { title: string; icon: typeof GitFork; badge?: string; children: React.ReactNode }) {
+  return <div className="x-border x-raised rounded-xl border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><h4 className="x-text flex items-center gap-2 text-xs font-bold"><Icon size={14} />{title}</h4>{badge && <span className="x-border x-muted rounded-full border px-2 py-0.5 text-[9px] font-semibold">{badge}</span>}</div><div className="x-muted mt-2 text-xs leading-5">{children}</div></div>;
 }
 
 function IssueRow({ item, saved, onSave }: { item: OpenSourceOpportunity; saved: boolean; onSave: () => void }) {
-  return <article className="x-border flex items-start gap-3 px-4 py-4 transition-colors hover:bg-[var(--surface-raised)] sm:px-6"><span className="mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-emerald-500 text-emerald-500"><span className="h-1 w-1 rounded-full bg-current" /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1.5"><h4 className="x-text text-sm font-bold leading-5 sm:text-base">{item.title}</h4>{item.labels.slice(0, 3).map((label) => <span key={label} className="x-border x-raised rounded-full border px-2 py-0.5 text-[10px] font-medium">{label}</span>)}</div><p className="x-muted mt-1 text-xs">#{item.issueNumber} · updated {formatDate(item.updatedAt)}{item.status === "ask-first" ? " · ask before starting" : ""}</p><p className="x-muted mt-2 line-clamp-2 text-xs leading-5">{item.keyRequirement ?? item.summary}</p></div><div className="flex shrink-0 items-center gap-1"><button onClick={onSave} aria-pressed={saved} className="focus-ring x-muted grid h-9 w-9 place-items-center rounded-full hover:bg-[var(--background)]" aria-label={saved ? "Remove saved issue" : "Save issue"}><Bookmark size={16} fill={saved ? "currentColor" : "none"} /></button>{item.issueUrl && <a href={item.issueUrl} target="_blank" rel="noreferrer" className="focus-ring x-primary grid h-9 w-9 place-items-center rounded-full" aria-label={`Open issue #${item.issueNumber} on GitHub`}><ArrowUpRight size={16} /></a>}</div></article>;
+  return <article className="x-border flex items-start gap-3 px-4 py-4 transition-colors hover:bg-[var(--surface-raised)] sm:px-6"><span className="mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-emerald-500 text-emerald-500"><span className="h-1 w-1 rounded-full bg-current" /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1.5"><h4 className="x-text text-sm font-bold leading-5 sm:text-base">{item.title}</h4>{item.labels.slice(0, 3).map((label) => <span key={label} className="x-border x-raised rounded-full border px-2 py-0.5 text-[10px] font-medium">{label}</span>)}</div><p className="x-muted mt-1 text-xs">#{item.issueNumber} · updated {formatDate(item.updatedAt)}{item.status === "ask-first" ? " · check assignment guidance above" : ""}</p><p className="x-muted mt-2 line-clamp-2 text-xs leading-5">{item.summary}</p></div><div className="flex shrink-0 items-center gap-1"><button onClick={onSave} aria-pressed={saved} className="focus-ring x-muted grid h-9 w-9 place-items-center rounded-full hover:bg-[var(--background)]" aria-label={saved ? "Remove saved issue" : "Save issue"}><Bookmark size={16} fill={saved ? "currentColor" : "none"} /></button>{item.issueUrl && <a href={item.issueUrl} target="_blank" rel="noreferrer" className="focus-ring x-primary grid h-9 w-9 place-items-center rounded-full" aria-label={`Open issue #${item.issueNumber} on GitHub`}><ArrowUpRight size={16} /></a>}</div></article>;
 }
 
 function formatDate(value: string) {

@@ -94,8 +94,8 @@ export function rankOpenSourceTiers(records: OpenSourceOpportunity[]): OpenSourc
 
   Object.values(buckets).forEach((items) => items.sort((a, b) => b.rank - a.rank || Date.parse(b.item.updatedAt) - Date.parse(a.item.updatedAt)));
   return [
-    { id: "beginner", title: "Beginner-friendly", description: "Focused issues with newcomer labels, usable setup guidance, and evidence that first contributions can receive review.", items: buckets.beginner },
-    { id: "moderate", title: "Experienced contributors", description: "Larger implementation work for developers who can navigate an established codebase and its test suite.", items: buckets.moderate },
-    { id: "high-impact", title: "Major ecosystem projects", description: "Harder work in widely adopted, actively maintained codebases. A merged contribution is publicly verifiable, but no hiring outcome is implied.", items: buckets["high-impact"] },
+    { id: "beginner", title: "Beginner-friendly", description: "Well-scoped issues to start your open-source journey.", items: buckets.beginner },
+    { id: "moderate", title: "Experienced contributors", description: "Larger codebase changes for contributors who are comfortable navigating established projects.", items: buckets.moderate },
+    { id: "high-impact", title: "Widely adopted projects", description: "Challenging work in community-adopted codebases with high industry relevance. Contributions provide strong, publicly verifiable technical work.", items: buckets["high-impact"] },
   ];
 }

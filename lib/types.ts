@@ -56,6 +56,7 @@ export type RepositoryQuality = {
 
 export type RepositoryGuidance = {
   assignment: string;
+  assignmentEvidence: "documented" | "issue-specific" | "not-found";
   beforeStarting: string[];
   avoid: string[];
   source?: Source;
@@ -75,6 +76,8 @@ export type OpenSourceOpportunity = {
   keyRequirement?: string;
   language: string;
   languageColor: string;
+  technologies?: string[];
+  matchingIssueCount?: number;
   labels: string[];
   experience: Experience;
   status: AvailabilityStatus;

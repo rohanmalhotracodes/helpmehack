@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, Check, ChevronDown, Clipboard, ExternalLink, Eye, GitFork, Link2, MessageSquareText, ShieldAlert, TestTube2, X } from "lucide-react";
+import { Bookmark, Check, ChevronDown, Clipboard, ExternalLink, Eye, Link2, MessageSquareText, ShieldAlert, TestTube2, X } from "lucide-react";
 import type { OpenSourceOpportunity } from "@/lib/types";
 import { Avatar, StatusPill } from "./ui";
 
-export function ContributionBrief({ item, statusChange, saved, followed, onSave, onFollow, onClose }: { item: OpenSourceOpportunity; statusChange?: { from: string; to: string } | null; saved: boolean; followed: boolean; onSave: () => void; onFollow: () => void; onClose: () => void }) {
+export function ContributionBrief({ item, statusChange, saved, onSave, onClose }: { item: OpenSourceOpportunity; statusChange?: { from: string; to: string } | null; saved: boolean; onSave: () => void; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = `brief-title-${item.id}`;
@@ -96,7 +96,6 @@ export function ContributionBrief({ item, statusChange, saved, followed, onSave,
         <footer className="grid shrink-0 grid-cols-2 gap-2 border-t border-zinc-800 bg-[#111114] p-3 sm:flex sm:items-center sm:px-6">
           {item.issueUrl ? <a href={item.issueUrl} target="_blank" rel="noreferrer" className="focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-zinc-100 px-4 text-xs font-semibold text-zinc-950 hover:bg-white">Open source issue <ExternalLink size={13} /></a> : <button disabled className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-800 px-4 text-xs font-medium text-zinc-500">No live issue</button>}
           <button onClick={onSave} aria-pressed={saved} className={`focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-lg border px-3 text-xs font-medium ${saved ? "x-primary border-transparent" : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"}`}><Bookmark size={14} fill={saved ? "currentColor" : "none"} />{saved ? "Saved" : "Save"}</button>
-          <button onClick={onFollow} aria-pressed={followed} className={`focus-ring col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-lg border px-3 text-xs font-medium sm:col-span-1 ${followed ? "x-primary border-transparent" : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"}`}><GitFork size={14} />{followed ? "Following locally" : "Follow repository"}</button>
         </footer>
       </section>
     </div>
