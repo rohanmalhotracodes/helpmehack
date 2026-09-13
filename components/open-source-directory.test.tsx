@@ -1,7 +1,12 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { OpenSourceOpportunity, RepositoryQuality } from "@/lib/types";
 import { OpenSourceDirectory } from "./open-source-directory";
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 const quality: RepositoryQuality = {
   score: 72,
@@ -67,5 +72,35 @@ describe("OpenSourceDirectory filters", () => {
     fireEvent.click(screen.getByRole("button", { name: "Saved 1" }));
     expect(screen.getByText("react-tool")).toBeInTheDocument();
     expect(screen.queryByText("django-tool")).not.toBeInTheDocument();
+  });
+
+  it("opens a repository from the full-card target without opening when saving", () => {
+    const onOpenRepository = vi.fn();
+    const onSaveRepository = vi.fn();
+    const view = render(<OpenSourceDirectory records={[opportunity("react-issue", "react-tool", ["TypeScript", "React"])]} savedRepositoryIds={[]} savedIssueIds={[]} onSaveRepository={onSaveRepository} onOpenRepository={onOpenRepository} />);
+
+    fireEvent.click(view.getAllByRole("button", { name: "View acme/react-tool contribution guide and open issues" })[0]);
+    expect(onOpenRepository).toHaveBeenCalledWith("acme/react-tool");
+
+    fireEvent.click(view.getAllByRole("button", { name: "Save acme/react-tool" })[0]);
+    expect(onSaveRepository).toHaveBeenCalledWith("acme/react-tool");
+    expect(onOpenRepository).toHaveBeenCalledTimes(1);
+  });
+
+  it("prefetches current issues and repository rules when a card receives intent", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ records: [], mode: "live", checkedAt: "2026-09-13T00:00:00Z" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const view = render(<OpenSourceDirectory records={[opportunity("prefetch-issue", "prefetch-tool", ["TypeScript"])]} savedRepositoryIds={[]} savedIssueIds={[]} onSaveRepository={vi.fn()} onOpenRepository={vi.fn()} />);
+
+    const openButton = view.getAllByRole("button", { name: "View acme/prefetch-tool contribution guide and open issues" })[0];
+    fireEvent.mouseEnter(openButton.closest("article")!);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/repository-opportunities?owner=acme&repo=prefetch-tool"),
+      { cache: "no-store" },
+    ));
   });
 });

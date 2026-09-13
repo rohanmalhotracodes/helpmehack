@@ -1,9 +1,30 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, Bookmark, CheckCircle2, ExternalLink, GitFork, LoaderCircle, ShieldAlert, X } from "lucide-react";
+import { ArrowUpRight, Bookmark, CheckCircle2, ExternalLink, LoaderCircle, ShieldAlert, X } from "lucide-react";
 import type { OpenSourceOpportunity, OpportunityPayload } from "@/lib/types";
 import { Avatar } from "./ui";
+
+const repositoryRequests = new Map<string, Promise<OpportunityPayload>>();
+
+export function prefetchRepositoryOpportunities(owner: string, repo: string, tiers: string) {
+  const key = `${owner}/${repo}?${tiers}`;
+  const cached = repositoryRequests.get(key);
+  if (cached) return cached;
+  const query = new URLSearchParams({ owner, repo, tiers });
+  const request = fetch(`/api/repository-opportunities?${query}`, { cache: "no-store" })
+    .then(async (response) => {
+      const body = await response.json() as OpportunityPayload & { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "Could not load repository issues.");
+      return body;
+    })
+    .catch((error) => {
+      repositoryRequests.delete(key);
+      throw error;
+    });
+  repositoryRequests.set(key, request);
+  return request;
+}
 
 export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSave, onSaveRepository, onClose }: {
   initialItems: OpenSourceOpportunity[];
@@ -24,7 +45,7 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    const controller = new AbortController();
+    let active = true;
     document.body.style.overflow = "hidden";
     closeRef.current?.focus();
     const keydown = (event: KeyboardEvent) => {
@@ -40,19 +61,17 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
     };
     document.addEventListener("keydown", keydown);
     if (owner && repo) {
-      const query = new URLSearchParams({ owner, repo, tiers: tiersKey });
-      fetch(`/api/repository-opportunities?${query}`, { cache: "no-store", signal: controller.signal })
-        .then(async (response) => {
-          const body = await response.json() as OpportunityPayload & { error?: string };
-          if (!response.ok) throw new Error(body.error ?? "Could not load repository issues.");
+      prefetchRepositoryOpportunities(owner, repo, tiersKey)
+        .then((body) => {
+          if (!active) return;
           const fresh = body.records.filter((item): item is OpenSourceOpportunity => item.category === "open-source" && ["unassigned", "ask-first", "unknown"].includes(item.status));
-          if (fresh.length) setItems(fresh);
+          setItems(fresh);
           setState("ready");
         })
-        .catch((error) => { if (error instanceof Error && error.name !== "AbortError") setState("error"); });
+        .catch(() => { if (active) setState("error"); });
     }
     return () => {
-      controller.abort();
+      active = false;
       document.body.style.overflow = "";
       document.removeEventListener("keydown", keydown);
       previous?.focus();
@@ -61,6 +80,7 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
 
   if (!first) return null;
   const guidance = first.repositoryGuidance;
+  const guidanceLoading = state === "loading" && guidance?.assignmentEvidence === "not-found";
   return (
     <div className="fixed inset-0 z-50 bg-black/70 p-0 backdrop-blur-[2px] sm:p-5" role="dialog" aria-modal="true" aria-labelledby="repository-title" id="repository-panel">
       <button className="absolute inset-0 h-full w-full cursor-default" onClick={onClose} aria-label="Close repository" />
@@ -81,19 +101,21 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
               <div><h3 id="before-issues-title" className="x-text text-lg font-bold">Read this before choosing an issue</h3>{first.repositoryDescription && <p className="x-muted mt-2 max-w-3xl text-sm leading-5">{first.repositoryDescription}</p>}</div>
               <button onClick={onSaveRepository} aria-pressed={repositorySaved} className={`focus-ring inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-full border px-4 text-xs font-bold ${repositorySaved ? "x-primary border-transparent" : "x-border x-text hover:bg-[var(--surface-raised)]"}`}><Bookmark size={14} fill={repositorySaved ? "currentColor" : "none"} />{repositorySaved ? "Saved" : "Save repository"}</button>
             </div>
-            <div className="mt-5 grid gap-3 md:grid-cols-3">
-              <GuidanceCard title="How to get assigned" icon={CheckCircle2} badge={guidance?.assignmentEvidence === "documented" ? "Documented rule" : guidance?.assignmentEvidence === "issue-specific" ? "Current issue evidence" : "No rule confirmed"}><p>{guidance?.assignment ?? "No assignment rule was confirmed. Open the issue and follow its current instructions before starting."}</p></GuidanceCard>
-              <GuidanceCard title="Before you code" icon={GitFork}><ul className="space-y-1.5">{(guidance?.beforeStarting ?? first.setup.slice(0, 3)).map((point) => <li key={point}>• {point}</li>)}</ul></GuidanceCard>
+            {guidanceLoading ? <div className="x-border x-muted mt-5 flex min-h-32 items-center justify-center gap-2 rounded-xl border px-6 text-center text-sm"><LoaderCircle size={16} className="animate-spin" />Reading repository contribution rules…</div> : <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <GuidanceCard title="How to get assigned" icon={CheckCircle2} badge={guidance?.assignmentEvidence === "documented" ? "Documented rule" : guidance?.assignmentEvidence === "issue-specific" ? "Current issue evidence" : "No rule confirmed"}>
+                <p>{guidance?.assignment ?? "No assignment rule was confirmed. Open the issue and follow its current instructions before starting."}</p>
+                {guidance?.assignmentSteps?.length ? <ol className="mt-2 list-decimal space-y-1.5 border-t border-[var(--border)] pt-2 pl-4">{guidance.assignmentSteps.map((step) => <li key={step} className="pl-1">{step}</li>)}</ol> : null}
+              </GuidanceCard>
               <GuidanceCard title="What not to do" icon={ShieldAlert}><ul className="space-y-1.5">{(guidance?.avoid ?? [first.caution]).map((point) => <li key={point}>• {point}</li>)}</ul></GuidanceCard>
-            </div>
-            {guidance?.source && <p className="x-muted mt-3 text-[11px]">{guidance.assignmentEvidence === "not-found" ? "Files checked" : "Assignment guidance source"} · <a href={guidance.source.href} target="_blank" rel="noreferrer" className="focus-ring underline underline-offset-2">{guidance.source.label}</a> · checked {formatDate(guidance.checkedAt)}</p>}
+            </div>}
+            {!guidanceLoading && guidance?.source && <p className="x-muted mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px]"><span>{guidance.assignmentEvidence === "not-found" ? "Files checked" : "Guidance sources"}</span><span>·</span>{(guidance.sources?.length ? guidance.sources : [guidance.source]).map((source, index) => <span key={source.href} className="inline-flex items-center gap-1.5"><a href={source.href} target="_blank" rel="noreferrer" className="focus-ring underline underline-offset-2">{source.label}</a>{index < (guidance.sources?.length ?? 1) - 1 ? <span>·</span> : null}</span>)}<span>· checked {formatDate(guidance.checkedAt)}</span></p>}
           </section>
 
           <section aria-labelledby="issues-title">
-            <div className="x-border flex items-center justify-between border-b px-4 py-3 sm:px-6"><div><h3 id="issues-title" className="x-text text-sm font-bold">Open for contribution</h3><p className="x-muted mt-0.5 text-[11px]">{state === "loading" ? "Checking available issues…" : `${items.length} available contribution ${items.length === 1 ? "issue" : "issues"}`}</p></div>{state === "loading" && <span className="x-muted flex items-center gap-2 text-xs"><LoaderCircle size={14} className="animate-spin" />Checking repository…</span>}{state === "error" && <span className="text-amber-400 text-xs">Showing the last available snapshot</span>}</div>
+            <div className="x-border flex items-center justify-between border-b px-4 py-3 sm:px-6"><div><h3 id="issues-title" className="x-text text-sm font-bold">Open for contribution</h3><p className="x-muted mt-0.5 text-[11px]">{state === "loading" ? "Verifying the current issue list…" : state === "error" ? `${items.length} ${items.length === 1 ? "issue" : "issues"} in the last available snapshot` : `${items.length} currently verified contribution ${items.length === 1 ? "issue" : "issues"}`}</p></div>{state === "loading" && <span className="x-muted flex items-center gap-2 text-xs"><LoaderCircle size={14} className="animate-spin" />Checking repository…</span>}{state === "error" && <span className="text-amber-400 text-xs">Showing the last available snapshot</span>}</div>
             <div className="divide-y" aria-live="polite">
-              {items.map((item) => <IssueRow key={item.id} item={item} saved={savedIds.includes(item.id)} onSave={() => onSave(item.id)} />)}
-              {!items.length && <p className="x-muted px-6 py-12 text-center text-sm">No currently verified issues were found for this repository.</p>}
+              {state === "loading" ? <div className="x-muted flex min-h-40 items-center justify-center gap-2 px-6 text-center text-sm"><LoaderCircle size={16} className="animate-spin" />Checking labels, assignments, claims, and linked pull requests…</div> : items.map((item) => <IssueRow key={item.id} item={item} saved={savedIds.includes(item.id)} onSave={() => onSave(item.id)} />)}
+              {state !== "loading" && !items.length && <p className="x-muted px-6 py-12 text-center text-sm">No currently verified issues were found for this repository.</p>}
             </div>
           </section>
         </div>
@@ -102,7 +124,7 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
   );
 }
 
-function GuidanceCard({ title, icon: Icon, badge, children }: { title: string; icon: typeof GitFork; badge?: string; children: React.ReactNode }) {
+function GuidanceCard({ title, icon: Icon, badge, children }: { title: string; icon: typeof CheckCircle2; badge?: string; children: React.ReactNode }) {
   return <div className="x-border x-raised rounded-xl border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><h4 className="x-text flex items-center gap-2 text-xs font-bold"><Icon size={14} />{title}</h4>{badge && <span className="x-border x-muted rounded-full border px-2 py-0.5 text-[9px] font-semibold">{badge}</span>}</div><div className="x-muted mt-2 text-xs leading-5">{children}</div></div>;
 }
 

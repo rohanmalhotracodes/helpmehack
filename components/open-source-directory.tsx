@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Bookmark, ChevronLeft, ChevronRight, CircleDot, Info, Search, Star, X } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, CircleDot, Search, Star, X } from "lucide-react";
 import type { RankedContribution } from "@/lib/open-source-tiers";
 import { rankOpenSourceTiers } from "@/lib/open-source-tiers";
 import type { OpenSourceOpportunity } from "@/lib/types";
 import { Avatar } from "./ui";
 import { NewsletterSignup } from "./newsletter-signup";
+import { prefetchRepositoryOpportunities } from "./repository-panel";
 
 type RankedRepository = {
   key: string;
@@ -96,15 +97,6 @@ export function OpenSourceDirectory({ records, savedRepositoryIds, savedIssueIds
         {tiers.map((tier) => <RepositoryTierSection key={tier.id} title={tier.title} description={tier.description} items={tier.repositories} savedRepositoryIds={savedRepositoryIds} onSave={onSaveRepository} onOpen={onOpenRepository} />)}
       </div>
 
-      <details className="x-border x-raised mt-10 rounded-xl border p-4">
-        <summary className="focus-ring x-text flex cursor-pointer list-none items-center gap-2 rounded text-sm font-bold"><Info size={16} />How the ranking works</summary>
-        <div className="x-muted mt-3 grid gap-4 text-xs leading-5 sm:grid-cols-3">
-          <p><strong className="x-text block">Beginner-friendly</strong>38% issue suitability, 22% clarity, 20% onboarding, 12% newcomer evidence, and 8% visible availability.</p>
-          <p><strong className="x-text block">Experienced contributors</strong>30% observed repository quality, 25% issue clarity, 20% maintenance, 15% review responsiveness, and 10% availability.</p>
-          <p><strong className="x-text block">Widely adopted projects</strong>42% public adoption, 23% reputation, 15% newcomer evidence, 12% maintenance, and 8% issue clarity. Beginner-labeled work is excluded from this tier.</p>
-        </div>
-        <p className="x-muted mt-4 text-xs leading-5">Repository quality is kept separate from issue availability. Merge evidence uses a disclosed 90-day public pull-request sample; if the sample is too small, the score is withheld rather than guessed.</p>
-      </details>
       <NewsletterSignup />
     </main>
   );
@@ -167,27 +159,34 @@ function RepositoryTierSection({ title, description, items, savedRepositoryIds, 
 }
 
 function RepositoryCard({ entry, saved, onSave, onOpen }: { entry: RankedRepository; saved: boolean; onSave: () => void; onOpen: () => void }) {
-  const { primary: item, matchingIssueCount, reason } = entry;
+  const { primary: item, reason } = entry;
   const stars = item.repositoryQuality?.stars;
   const guidance = item.repositoryGuidance;
+  const tiersKey = [...new Set(entry.issues.flatMap((issue) => issue.discoveryTiers ?? item.discoveryTiers ?? []))].join(",");
+  const prefetch = () => {
+    void prefetchRepositoryOpportunities(item.owner, item.repo, tiersKey).catch(() => undefined);
+  };
   return (
-    <article className="card flex min-h-[270px] w-[min(82vw,292px)] shrink-0 snap-start flex-col overflow-hidden p-4 sm:w-[292px]">
+    <article onMouseEnter={prefetch} onFocusCapture={prefetch} onPointerDown={prefetch} className="card group relative min-h-[270px] w-[min(82vw,292px)] shrink-0 snap-start overflow-hidden p-4 transition-colors hover:bg-[var(--surface-raised)] sm:w-[292px]">
+      <button type="button" onClick={onOpen} className="focus-ring absolute inset-0 z-0 cursor-pointer rounded-[inherit]" aria-label={`View ${entry.key} contribution guide and open issues`} />
+      <div className="pointer-events-none relative z-10 flex h-full min-h-[238px] flex-col">
         <div className="flex w-full items-center gap-3">
           <Avatar initials={item.avatar} fallback={item.owner} />
           <div className="min-w-0 flex-1">
             <p className="mono x-muted truncate text-[11px]">{item.owner}</p>
             <h3 className="mono x-text truncate text-sm font-bold">{item.repo}</h3>
           </div>
-          <button onClick={onSave} aria-pressed={saved} className="focus-ring x-muted grid h-9 w-9 shrink-0 place-items-center rounded-full hover:bg-[var(--surface-raised)]" aria-label={saved ? `Remove ${entry.key} from saved repositories` : `Save ${entry.key}`}><Bookmark size={16} fill={saved ? "currentColor" : "none"} /></button>
+          <button type="button" onClick={onSave} aria-pressed={saved} className="focus-ring x-muted pointer-events-auto grid h-9 w-9 shrink-0 place-items-center rounded-full hover:bg-[var(--background)]" aria-label={saved ? `Remove ${entry.key} from saved repositories` : `Save ${entry.key}`}><Bookmark size={16} fill={saved ? "currentColor" : "none"} /></button>
         </div>
         <p className="x-muted mt-4 line-clamp-2 min-h-10 text-xs leading-5">{item.repositoryDescription || item.summary}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="x-border x-text inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.languageColor }} />{item.language}</span>
-          <span className="x-border x-text inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold"><CircleDot size={11} />{matchingIssueCount} {matchingIssueCount === 1 ? "issue" : "issues"} found</span>
+          <span className="x-border x-text inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold"><CircleDot size={11} />Contribution issues</span>
           {stars != null && stars > 0 && <span className="x-border x-text inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold"><Star size={11} />{compactNumber(stars)}</span>}
         </div>
         <p className="x-muted mt-auto border-l-2 x-border pt-5 pl-2 text-[11px] leading-4">{reason}</p>
-        <button onClick={onOpen} className="focus-ring x-text group mt-3 flex items-center justify-between rounded-lg text-left text-xs font-bold" aria-label={`View ${entry.key} contribution guide and open issues`}><span>{guidance ? "Read rules and choose an issue" : "View repository issues"}</span><ChevronRight size={16} className="x-muted transition-transform group-hover:translate-x-0.5" /></button>
+        <div className="x-text mt-3 flex items-center justify-between text-left text-xs font-bold"><span>{guidance ? "Read rules and choose an issue" : "View repository issues"}</span><ChevronRight size={16} className="x-muted transition-transform group-hover:translate-x-0.5" /></div>
+      </div>
     </article>
   );
 }

@@ -63,11 +63,11 @@ export function OverlookedFeed({ onOpenSource }: { onOpenSource: () => void }) {
         </section>
 
         <aside className="sticky top-20 hidden space-y-4 lg:block" aria-label="Overlooked feed information">
-          <div className="card p-4">
+          <div className="card overlooked-aside-card p-4">
             <h2 className="x-text text-base font-bold">No engagement bait</h2>
             <p className="x-muted mt-2 text-sm leading-5">This is a read-only editorial feed. There are no likes, replies, reposts, follower counts, or sponsored posts.</p>
           </div>
-          <div className="card p-4">
+          <div className="card overlooked-aside-card p-4">
             <h2 className="x-text text-base font-bold">Ready to contribute?</h2>
             <p className="x-muted mt-2 text-sm leading-5">Browse issues ranked using availability, setup guidance, maintainer activity, and newcomer pull-request evidence.</p>
             <button onClick={onOpenSource} className="focus-ring x-primary mt-4 inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-bold">Open source <ArrowUpRight size={14} /></button>

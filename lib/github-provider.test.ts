@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { detectAssignmentPolicySignal, GitHubOpportunityProvider, isClaimedWorkLabel, isStaleWorkLabel, referencesIssueWithClosingKeyword } from "./github-provider";
+import { detectAssignmentPolicySignal, findLinkedContributionDocuments, GitHubOpportunityProvider, isClaimedWorkLabel, isStaleWorkLabel, referencesIssueWithClosingKeyword, summarizeRepositoryGuidance } from "./github-provider";
 
 const json = (value: unknown, init?: ResponseInit) => new Response(JSON.stringify(value), {
   status: 200,
@@ -19,7 +19,7 @@ describe("GitHubOpportunityProvider", () => {
       comments_url: "https://api.github.com/repos/oppia/oppia/issues/7/comments",
       number: 7,
       title: "Clarify widget errors",
-      body: "Improve the error copy. To claim the issue, comment @widgetbot claim.",
+      body: "Improve the error copy.",
       labels: [{ name: "good first issue", color: "00ff00" }],
       assignee: null,
       user: { login: "reporter", avatar_url: "https://avatars.githubusercontent.com/u/1" },
@@ -33,7 +33,12 @@ describe("GitHubOpportunityProvider", () => {
       if (url.endsWith("/repos/oppia/oppia")) return json({ full_name: "oppia/oppia", name: "oppia", description: "Free learning platform", html_url: "https://github.com/oppia/oppia", language: "TypeScript", topics: ["react", "education"], owner: { login: "oppia", avatar_url: "https://avatars.githubusercontent.com/u/2" }, archived: false });
       if (url.includes("/comments?")) return json([{ html_url: "https://github.com/oppia/oppia/issues/7#issuecomment-1", body: "I would like to work on this", created_at: recent, user: { login: "contributor", avatar_url: "https://avatars.githubusercontent.com/u/3" }, author_association: "NONE" }]);
       if (url.includes("/timeline?")) return json([]);
-      if (url.includes("/contents/CONTRIBUTING.md")) return json({ message: "Not found" }, { status: 404 });
+      if (url.includes("/contents/CONTRIBUTING.md")) return json({
+        html_url: "https://github.com/oppia/oppia/blob/develop/CONTRIBUTING.md",
+        encoding: "base64",
+        content: Buffer.from("See the [coding contribution guide](https://github.com/oppia/oppia/wiki/Contributing-code-to-Oppia).").toString("base64"),
+      });
+      if (url === "https://raw.githubusercontent.com/wiki/oppia/oppia/Contributing-code-to-Oppia.md") return new Response("To claim an issue, comment `@widgetbot claim` and wait for assignment.");
       return json({ message: "Unexpected request" }, { status: 500 });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -55,10 +60,78 @@ describe("GitHubOpportunityProvider", () => {
 
   it("distinguishes documented assignment policies", () => {
     expect(detectAssignmentPolicySignal("Please request assignment before starting")).toBe("assignment-required");
+    expect(detectAssignmentPolicySignal("Ask for the issue to be assigned to you by leaving a comment.")).toBe("assignment-required");
     expect(detectAssignmentPolicySignal("Discuss your approach before implementation")).toBe("approval-required");
+    expect(detectAssignmentPolicySignal("An issue with your proposal must be submitted first.")).toBe("approval-required");
     expect(detectAssignmentPolicySignal("No need for assignment; feel free to submit a PR")).toBe("direct");
     expect(detectAssignmentPolicySignal("Before starting the development server, install dependencies.")).toBeNull();
     expect(detectAssignmentPolicySignal("Pull requests are welcome.")).toBeNull();
+  });
+
+  it("keeps bot commands and repository claim limits from a contribution guide", () => {
+    const guidance = summarizeRepositoryGuidance("zulip/zulip", "https://github.com/zulip/zulip", [{
+      source: { label: "CONTRIBUTING.md", href: "https://github.com/zulip/zulip/blob/main/CONTRIBUTING.md", kind: "guide" },
+      text: `### Claiming an issue
+Find an issue tagged with the "help wanted" label that is unassigned.
+To claim an issue, post a comment that says \`@zulipbot claim\` to the issue thread.
+New contributors can only claim one issue until their first pull request is merged.`,
+    }], "2026-09-13T00:00:00Z");
+
+    expect(guidance.assignment).toContain("@zulipbot claim");
+    expect(guidance.assignmentSteps).toContain("Post `@zulipbot claim` in the issue thread and wait for the assignment to appear.");
+    expect(guidance.assignmentSteps).toContain("Claim only one issue until your first pull request is merged.");
+    expect(guidance.assignmentEvidence).toBe("documented");
+  });
+
+  it("treats an extracted contribution prerequisite as documented evidence", () => {
+    const guidance = summarizeRepositoryGuidance("acme/widgets", "https://github.com/acme/widgets", [{
+      source: { label: "Contribution guide", href: "https://github.com/acme/widgets/blob/main/CONTRIBUTING.md", kind: "guide" },
+      text: "In your issue comment, describe your approach and the files you expect to change.",
+    }], "2026-09-13T00:00:00Z");
+
+    expect(guidance.assignmentSteps).toContain("Describe your approach and the files you expect to change.");
+    expect(guidance.assignmentEvidence).toBe("documented");
+    expect(guidance.assignment).not.toContain("No assignment rule was confirmed");
+  });
+
+  it("follows a same-repository contribution wiki and extracts its prerequisites", () => {
+    const source = { label: "Contribution guide", href: "https://github.com/oppia/oppia/blob/develop/.github/CONTRIBUTING.md", kind: "guide" as const };
+    const [candidate] = findLinkedContributionDocuments("oppia/oppia", [{
+      source,
+      text: "See the [Coders](https://github.com/oppia/oppia/wiki/Contributing-code-to-Oppia) guide.",
+    }]);
+    expect(candidate).toMatchObject({
+      href: "https://github.com/oppia/oppia/wiki/Contributing-code-to-Oppia",
+      rawUrl: "https://raw.githubusercontent.com/wiki/oppia/oppia/Contributing-code-to-Oppia.md",
+    });
+
+    const guidance = summarizeRepositoryGuidance("oppia/oppia", "https://github.com/oppia/oppia", [{
+      source: { label: "Contributing code to Oppia", href: candidate.href, kind: "guide" },
+      text: `## Finding something to do
+Please only work on issues that are labelled **"Impact: High"** or **"Impact: Medium"**, and that have no assignee.
+Do not work on "Impact: Low" or "Backlog" issues.
+Do not work on issues with the "triage needed" label.
+Try to reproduce the issue and get a fix working on your local dev server.
+Once you understand it, ask for it to be assigned to you by leaving a comment:
+- Show a video of the fix working correctly on your local machine.
+- If fixing a bug, explain the root cause.
+- Explain which files you modified and describe the changes.
+- @-mention the corresponding project leads and say when you can submit a PR.
+If your proof looks good, we'll assign the issue to you. Once assigned, submit a PR.`,
+    }], "2026-09-13T00:00:00Z");
+
+    expect(guidance.assignmentEvidence).toBe("documented");
+    expect(guidance.assignmentSteps).toEqual(expect.arrayContaining([
+      "Include the requested video showing the fix working locally.",
+      "For a bug, explain the root cause and point to the relevant code.",
+      "Describe your approach and the files you expect to change.",
+      "Mention the relevant project lead and state when you can submit the pull request.",
+    ]));
+    expect(guidance.avoid).toEqual(expect.arrayContaining([
+      "Do not choose issues labeled “Impact: Low” or “Backlog”.",
+      "Do not choose issues labeled “triage needed”.",
+    ]));
+    expect(guidance.source?.href).toBe(candidate.href);
   });
 
   it("treats explicit work-state labels as claimed, without matching unrelated labels", () => {

@@ -56,10 +56,12 @@ export type RepositoryQuality = {
 
 export type RepositoryGuidance = {
   assignment: string;
+  assignmentSteps?: string[];
   assignmentEvidence: "documented" | "issue-specific" | "not-found";
   beforeStarting: string[];
   avoid: string[];
   source?: Source;
+  sources?: Source[];
   checkedAt: string;
 };
 

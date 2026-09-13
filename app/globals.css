@@ -2,12 +2,12 @@
 
 :root {
   color-scheme: dark;
-  --background: #000000;
-  --surface: #000000;
-  --surface-raised: #16181c;
-  --border: #2f3336;
-  --text: #e7e9ea;
-  --muted: #71767b;
+  --background: #18181b;
+  --surface: #212124;
+  --surface-raised: #2a2a2e;
+  --border: #3f3f46;
+  --text: #f4f4f5;
+  --muted: #a1a1aa;
   --primary-bg: #eff3f4;
   --primary-text: #0f1419;
 }
@@ -27,7 +27,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 ::selection { background: rgba(29, 155, 240, .25); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: #3f3f46; border: 3px solid #111114; border-radius: 999px; }
+::-webkit-scrollbar-thumb { background: #52525b; border: 3px solid #18181b; border-radius: 999px; }
 
 .app-theme {
   min-height: 100vh;
@@ -56,6 +56,8 @@ button { cursor: pointer; }
 .x-muted { color: var(--muted); }
 .placeholder-muted::placeholder { color: var(--muted); }
 .x-accent-border { border-left-color: var(--text); }
+.logo-mark { box-shadow: 0 3px 10px rgba(0, 0, 0, .32); }
+.app-theme[data-theme="light"] .logo-mark { box-shadow: 0 2px 8px rgba(15, 20, 25, .08); }
 .theme-checkbox { accent-color: var(--text); }
 .focus-ring:focus-visible { outline: 2px solid #1d9bf0; outline-offset: 2px; }
 .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", ui-monospace, monospace; }
@@ -86,17 +88,18 @@ button { cursor: pointer; }
 .app-theme[data-theme="light"] [class*="divide-zinc-800"] > :not(:last-child) { border-color: #eff3f4; }
 
 /* Normalize the light-directory utilities when Lights Out is active. */
-.app-theme[data-theme="dark"] :is(.text-slate-950, .text-slate-900, .text-slate-800, .text-slate-700) { color: #e7e9ea; }
-.app-theme[data-theme="dark"] :is(.text-slate-600, .text-slate-500, .text-slate-400) { color: #71767b; }
-.app-theme[data-theme="dark"] :is(.border-slate-100, .border-slate-200, .border-slate-300) { border-color: #2f3336; }
-.app-theme[data-theme="dark"] :is(.bg-white, .bg-slate-50) { background-color: #000000; }
-.app-theme[data-theme="dark"] .bg-slate-100 { background-color: #16181c; }
-.app-theme[data-theme="dark"] [class~="bg-slate-50/80"] { background-color: #16181c; }
-.app-theme[data-theme="dark"] [class~="hover:bg-slate-50/80"]:hover { background-color: #16181c; }
+.app-theme[data-theme="dark"] :is(.text-slate-950, .text-slate-900, .text-slate-800, .text-slate-700) { color: #f4f4f5; }
+.app-theme[data-theme="dark"] :is(.text-slate-600, .text-slate-500, .text-slate-400) { color: #a1a1aa; }
+.app-theme[data-theme="dark"] :is(.border-slate-100, .border-slate-200, .border-slate-300) { border-color: #3f3f46; }
+.app-theme[data-theme="dark"] :is(.bg-white, .bg-slate-50) { background-color: #212124; }
+.app-theme[data-theme="dark"] .bg-slate-100 { background-color: #2a2a2e; }
+.app-theme[data-theme="dark"] [class~="bg-slate-50/80"] { background-color: #2a2a2e; }
+.app-theme[data-theme="dark"] [class~="hover:bg-slate-50/80"]:hover { background-color: #2a2a2e; }
 .app-theme[data-theme="dark"] [class~="bg-[#111114]"],
 .app-theme[data-theme="dark"] [class~="bg-[#151518]"],
-.app-theme[data-theme="dark"] [class~="bg-[#0d0d0f]"] { background-color: #000000; }
-.app-theme[data-theme="dark"] :is(.border-zinc-700, .border-zinc-800) { border-color: #2f3336; }
+.app-theme[data-theme="dark"] [class~="bg-[#0d0d0f]"] { background-color: #212124; }
+.app-theme[data-theme="dark"] :is(.border-zinc-700, .border-zinc-800) { border-color: #3f3f46; }
+.app-theme[data-theme="dark"] .overlooked-aside-card { background-color: var(--background); }
 .app-theme .divide-y > :not(:last-child) { border-color: var(--border); }
 
 /* Status colors remain semantic but quiet in each theme. */

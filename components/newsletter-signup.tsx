@@ -36,8 +36,8 @@ export function NewsletterSignup() {
     <section className="x-border mt-12 border-y py-9 sm:rounded-2xl sm:border sm:px-8 sm:py-10" aria-labelledby="newsletter-title">
       <div className="mx-auto max-w-3xl text-center">
         <span className="x-raised x-muted inline-flex h-9 w-9 items-center justify-center rounded-full"><Mail size={17} aria-hidden="true" /></span>
-        <h2 id="newsletter-title" className="x-text mt-4 text-xl font-bold tracking-tight sm:text-2xl">The useful opportunities, once a week.</h2>
-        <p className="x-muted mx-auto mt-2 max-w-xl text-sm leading-6">Get quality competitions and overlooked open-source opportunities delivered to your inbox. No daily noise. Unsubscribe anytime.</p>
+        <h2 id="newsletter-title" className="x-text mt-4 text-xl font-bold tracking-tight sm:text-2xl">Sign up for our newsletter.</h2>
+        <p className="x-text mx-auto mt-2 max-w-xl text-sm leading-6">Get timely updates on the latest open-source fellowships.</p>
         {state === "success" ? (
           <div className="x-raised x-text mx-auto mt-5 inline-flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-medium" role="status"><Check size={16} />{message}</div>
         ) : (
@@ -47,7 +47,7 @@ export function NewsletterSignup() {
             <button disabled={state === "submitting"} className="focus-ring x-primary inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-bold disabled:cursor-wait disabled:opacity-60">{state === "submitting" ? "Subscribing…" : "Subscribe"}<ArrowRight size={15} aria-hidden="true" /></button>
           </form>
         )}
-        <p className={`mt-3 min-h-5 text-xs ${state === "error" ? "text-red-400" : "x-muted"}`} role="status" aria-live="polite">{state === "error" ? message : "Your email is sent directly to the configured newsletter provider and is not stored by HelpMeHack."}</p>
+        {state === "error" && <p className="mt-3 text-xs text-red-400" role="status" aria-live="polite">{message}</p>}
       </div>
     </section>
   );

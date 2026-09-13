@@ -61,9 +61,7 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
         ? <OverlookedFeed onOpenSource={() => navigate("open-source")} />
         : <OpenSourceDirectory records={records} savedRepositoryIds={savedRepositories.items} savedIssueIds={saved.items} onSaveRepository={savedRepositories.toggle} onOpenRepository={setActiveRepository} />}
 
-      <footer className="x-muted mx-auto flex max-w-[1240px] flex-col gap-2 px-5 py-8 text-center text-[11px] sm:flex-row sm:items-center sm:justify-between sm:text-left">
-        <p>© 2026 HelpMeHack</p>
-      </footer>
+      <SiteFooter onNavigate={navigate} />
 
       {menuOpen && <MobileNav view={view} onNavigate={navigate} onClose={() => setMenuOpen(false)} />}
       {activeRepository && activeItems.length > 0 && <RepositoryPanel key={activeRepository} initialItems={activeItems} savedIds={saved.items} repositorySaved={savedRepositories.items.includes(activeRepository)} onSave={(id) => {
@@ -75,12 +73,33 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
   );
 }
 
+function SiteFooter({ onNavigate }: { onNavigate: (view: View) => void }) {
+  const linkClass = "focus-ring rounded px-1 py-1 font-medium transition-colors hover:text-[var(--text)]";
+  return (
+    <footer className="x-border mt-12 border-t" aria-label="Site footer">
+      <div className="x-muted mx-auto flex max-w-[1240px] flex-col items-center gap-4 px-5 py-7 text-xs sm:flex-row sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Image src="/helpmehack-mark.png" width={24} height={24} alt="" className="logo-mark h-6 w-6 rounded-md" />
+          <p>© 2026 HelpMeHack</p>
+        </div>
+        <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2" aria-label="Footer navigation">
+          <button type="button" onClick={() => onNavigate("overlooked")} className={linkClass}>Overlooked</button>
+          <button type="button" onClick={() => onNavigate("open-source")} className={linkClass}>Open Source</button>
+          <a href="https://opensource.guide/how-to-contribute/" target="_blank" rel="noreferrer" className={linkClass}>Contributor guide</a>
+          <a href="https://docs.github.com/en/rest" target="_blank" rel="noreferrer" className={linkClass}>GitHub data</a>
+          <a href="https://github.com/rohanmalhotracodes/helpmehack" target="_blank" rel="noreferrer" className={linkClass}>Source code</a>
+        </nav>
+      </div>
+    </footer>
+  );
+}
+
 function TopNav({ view, onNavigate, theme, onToggleTheme, onMenu }: { view: View; onNavigate: (view: View) => void; theme: "light" | "dark"; onToggleTheme: () => void; onMenu: () => void }) {
   return (
     <header className="x-border sticky top-0 z-30 border-b bg-[color:var(--background)]/95 backdrop-blur">
       <div className="mx-auto flex h-[61px] max-w-[1240px] items-center gap-4 px-3 sm:px-5">
         <button onClick={() => onNavigate("overlooked")} className="focus-ring flex shrink-0 items-center gap-2 rounded-lg" aria-label="HelpMeHack — open Overlooked">
-          <Image src="/helpmehack-mark.png" width={34} height={34} priority alt="" className="h-[34px] w-[34px] rounded-lg" />
+          <Image src="/helpmehack-mark.png" width={34} height={34} priority alt="" className="logo-mark h-[34px] w-[34px] rounded-lg" />
           <span className="x-text hidden text-sm font-bold tracking-tight sm:block">helpmehack</span>
         </button>
         <nav className="ml-auto hidden h-full items-center gap-1 sm:flex" aria-label="Primary navigation">

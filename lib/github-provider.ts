@@ -49,7 +49,17 @@ type RepositorySearchResponse = { items: GitHubRepo[] };
 type FetchOptions = RequestInit & { next?: { revalidate: number; tags?: string[] } };
 type DiscoveryTier = NonNullable<OpenSourceOpportunity["discoveryTiers"]>[number];
 type Candidate = { issue: GitHubIssue; tiers: DiscoveryTier[]; matchingIssueCount: number };
-type RepositoryContext = { repo: GitHubRepo; contributionFile: ContentFile | null; guideText: string | null; readmeText: string | null; repositoryQuality: RepositoryQuality; repositoryGuidance: RepositoryGuidance };
+export type DocumentationDocument = { text: string; source: Source };
+type LinkedDocumentCandidate = { href: string; rawUrl: string; label: string; score: number };
+type RepositoryContext = {
+  repo: GitHubRepo;
+  contributionFile: ContentFile | null;
+  guideText: string | null;
+  readmeText: string | null;
+  documents: DocumentationDocument[];
+  repositoryQuality: RepositoryQuality;
+  repositoryGuidance: RepositoryGuidance;
+};
 
 const languageColors: Record<string, string> = {
   TypeScript: "#3178c6", JavaScript: "#f1e05a", Python: "#3572a5", Rust: "#dea584", Go: "#00add8", Java: "#b07219",
@@ -145,6 +155,118 @@ function decodeFile(file: ContentFile | null) {
   try { return Buffer.from(file.content.replace(/\n/g, ""), "base64").toString("utf8"); } catch { return null; }
 }
 
+function cleanMarkdown(value: string) {
+  return value
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/<!--([\s\S]*?)-->/g, " ")
+    .replace(/\[([^\]]+)]\([^)]+\)/g, "$1")
+    .replace(/\[\[([^\]|]+)\|([^\]]+)]]/g, "$1")
+    .replace(/[`*_>#]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function relevantAssignmentSection(text: string) {
+  const lines = text.split(/\r?\n/);
+  const headings = lines.flatMap((line, index) => {
+    const match = line.match(/^(#{1,6})\s+(.+)$/);
+    return match ? [{ index, level: match[1].length, title: cleanMarkdown(match[2]) }] : [];
+  });
+  const ranked = headings
+    .map((heading) => ({ ...heading, score: /claim(?:ing)? (?:an? )?issue|how to claim|assignment process/i.test(heading.title) ? 4 : /assign|claim/i.test(heading.title) ? 3 : /find(?:ing)? (?:an? )?issue|pick(?:ing)? (?:an? )?issue|something to do/i.test(heading.title) ? 2 : 0 }))
+    .filter((heading) => heading.score)
+    .sort((a, b) => b.score - a.score || a.index - b.index)[0];
+  if (!ranked) {
+    const match = /(?:request|ask for|claim|assign)/i.exec(text);
+    if (!match) return text.slice(0, 8_000);
+    return text.slice(Math.max(0, match.index - 1_500), match.index + 5_000);
+  }
+  const end = headings.find((heading) => heading.index > ranked.index && heading.level <= ranked.level)?.index ?? lines.length;
+  return lines.slice(ranked.index, end).join("\n").slice(0, 12_000);
+}
+
+function quotedTerms(value: string) {
+  const terms: string[] = [];
+  for (const match of value.matchAll(/(?:"([^"]{2,60})"|“([^”]{2,60})”|\*\*([^*]{2,60})\*\*)/g)) {
+    const term = (match[1] ?? match[2] ?? match[3] ?? "").replace(/^["“]|["”]$/g, "").trim();
+    if (term && !terms.includes(term)) terms.push(term);
+  }
+  return terms;
+}
+
+function assignmentSteps(text: string, botCommand?: string) {
+  const section = relevantAssignmentSection(text);
+  const plain = cleanMarkdown(section);
+  const steps: string[] = [];
+  const add = (step: string) => { if (!steps.includes(step)) steps.push(step); };
+  const allowedIssueLine = section.split(/\r?\n/).find((line) => /(?:only (?:work on|choose)|find) issues?.{0,100}(?:label|tag)|issues?.{0,80}(?:label|tag).{0,80}(?:unassigned|no assignee)/i.test(line));
+  const allowedLabels = allowedIssueLine ? quotedTerms(allowedIssueLine).filter((term) => !/assignee|assignment|issues?|labels?/i.test(term)).slice(0, 3) : [];
+  if (allowedLabels.length && /unassigned|no assignee/i.test(allowedIssueLine ?? "")) add(`Choose an unassigned issue labeled ${allowedLabels.map((label) => `“${label}”`).join(" or ")}.`);
+  else if (/help wanted.{0,100}(?:unassigned|no assignee)|(?:unassigned|no assignee).{0,100}help wanted/i.test(plain)) add("Choose an unassigned issue carrying the repository’s contribution-ready label.");
+  else if (/unassigned issue|issue.{0,30}(?:has no assignee|is not assigned)/i.test(plain)) add("Choose an unassigned issue and check that no implementation pull request is open.");
+  if (/reproduc(?:e|ing).{0,180}(?:issue|bug)|(?:issue|bug).{0,180}reproduc/i.test(plain)) add("Reproduce and understand the issue before requesting it.");
+  if (/video.{0,180}(?:fix|working|local)|(?:show|provide).{0,80}video/i.test(plain)) add("Include the requested video showing the fix working locally.");
+  if (/root cause/i.test(plain)) add("For a bug, explain the root cause and point to the relevant code.");
+  if (/(?:file\(s\)|files?).{0,100}(?:modif|chang)|(?:explain|describe).{0,100}(?:approach|solution|what you did)/i.test(plain)) add("Describe your approach and the files you expect to change.");
+  if (/@-?mention.{0,160}(?:(?:project|team) leads?|leads?.{0,80}(?:project|team))|(?:(?:project|team) leads?|leads?.{0,80}(?:project|team)).{0,160}@-?mention/i.test(plain)) add("Mention the relevant project lead and state when you can submit the pull request.");
+  if (botCommand) add(`Post \`${botCommand}\` in the issue thread and wait for the assignment to appear.`);
+  else if (/(?:leave|post).{0,100}comment.{0,160}(?:claim|assign)|ask.{0,100}(?:assigned|assignment)/i.test(plain)) add("Post the documented claim request in the issue thread.");
+  if (/only (?:claim|work on|pick up) one issue.{0,180}(?:first|until).{0,100}(?:pull request|pr).{0,60}merged/i.test(plain)) add("Claim only one issue until your first pull request is merged.");
+  if (/(?:wait|once|until).{0,100}(?:assign|approval|confirm)|(?:we(?:'ll| will)|maintainers?).{0,100}assign/i.test(plain)) add("Wait for the documented confirmation before opening a pull request.");
+  return steps.slice(0, 8);
+}
+
+function specificAvoidRules(text: string) {
+  const rules: string[] = [];
+  for (const line of relevantAssignmentSection(text).split(/\r?\n/)) {
+    if (!/(?:do not|don['’]t|never|please avoid)\s+(?:work on|choose|pick|open|submit|create)/i.test(cleanMarkdown(line))) continue;
+    const labels = quotedTerms(line).filter((term) => term.length <= 40);
+    if (/work on|choose|pick/i.test(line) && labels.length) rules.push(`Do not choose issues labeled ${labels.slice(0, 3).map((label) => `“${label}”`).join(" or ")}.`);
+    else if (/AI-generated.{0,100}(?:understood|tested)|(?:understood|tested).{0,100}AI-generated/i.test(line)) rules.push("Do not submit AI-generated work you have not personally understood and tested.");
+    else if (/(?:open|submit|create).{0,30}(?:pull request|PR)/i.test(line) && /(?:before|without|until)/i.test(line)) rules.push("Do not open a pull request before completing the repository’s documented prerequisite.");
+  }
+  return [...new Set(rules)].slice(0, 3);
+}
+
+function linkedDocumentationCandidates(repoFullName: string, documents: DocumentationDocument[]) {
+  const [expectedOwner, expectedRepo] = repoFullName.toLowerCase().split("/");
+  const candidates: LinkedDocumentCandidate[] = [];
+  for (const document of documents) {
+    for (const match of document.text.matchAll(/\[([^\]]+)]\((https:\/\/github\.com\/[^)\s#]+)(?:#[^)\s]+)?\)/gi)) {
+      const label = cleanMarkdown(match[1]);
+      let url: URL;
+      try { url = new URL(match[2]); } catch { continue; }
+      const parts = url.pathname.split("/").filter(Boolean);
+      if (parts[0]?.toLowerCase() !== expectedOwner || parts[1]?.toLowerCase() !== expectedRepo) continue;
+      if (!/(?:contribut|developer|getting.started|making.pull.requests?|finding.*issue|code)/i.test(`${label} ${url.pathname}`)) continue;
+      if (/(?:design|artist|voice|teach|research)/i.test(`${label} ${url.pathname}`)) continue;
+      const score = /(?:finding.*issue|making.pull.requests?|contributing.code)/i.test(`${label} ${url.pathname}`) ? 3 : /(?:developer|\bcode\b)/i.test(`${label} ${url.pathname}`) ? 2 : 1;
+      if (parts[2] === "wiki" && parts[3]) {
+        const page = decodeURIComponent(parts.slice(3).join("/"));
+        candidates.push({ href: `${url.origin}${url.pathname}`, rawUrl: `https://raw.githubusercontent.com/wiki/${parts[0]}/${parts[1]}/${page}.md`, label, score });
+      } else if (parts[2] === "blob" && parts.length > 4) {
+        candidates.push({ href: `${url.origin}${url.pathname}`, rawUrl: `https://raw.githubusercontent.com/${parts[0]}/${parts[1]}/${parts.slice(3).join("/")}`, label, score });
+      }
+    }
+  }
+  const unique = new Map<string, LinkedDocumentCandidate>();
+  for (const candidate of candidates) {
+    const existing = unique.get(candidate.href);
+    if (!existing || candidate.score > existing.score) unique.set(candidate.href, candidate);
+  }
+  return [...unique.values()].sort((a, b) => b.score - a.score).slice(0, 2);
+}
+
+async function fetchLinkedDocument(candidate: LinkedDocumentCandidate, force: boolean): Promise<DocumentationDocument | null> {
+  const options: FetchOptions = force
+    ? { cache: "no-store", headers: { "User-Agent": "helpmehack.com" } }
+    : { cache: "force-cache", next: { revalidate: 3_600, tags: ["github-opportunities"] }, headers: { "User-Agent": "helpmehack.com" } };
+  const response = await fetch(candidate.rawUrl, options);
+  if (!response.ok) return null;
+  const text = (await response.text()).slice(0, 500_000);
+  return text.trim() ? { text, source: { label: candidate.label || "Contribution instructions", href: candidate.href, kind: "guide" } } : null;
+}
+
 function isPracticeRepository(repo: GitHubRepo) {
   return PRACTICE_REPOSITORY_PATTERN.test(`${repo.name} ${repo.description ?? ""} ${(repo.topics ?? []).join(" ")}`);
 }
@@ -158,13 +280,13 @@ function closesIssue(body: string | null | undefined, owner: string, repo: strin
 
 function policySignal(text: string | null | undefined): AssignmentPolicyKind | null {
   if (!text) return null;
-  if (/(?:must|need(?:s)? to|required to|please)\s+(?:be\s+)?assign|request assignment|\/assign\b/i.test(text)) return "assignment-required";
-  if (/(?:discuss|propose|describe|share) (?:the |your )?(?:approach|proposal|solution).{0,80}(?:before|prior to) (?:you )?(?:start|begin|implement|submit)|(?:approval|maintainer confirmation) (?:is )?required (?:before|prior to)|(?:wait for|receive|obtain) (?:maintainer )?(?:approval|confirmation) (?:before|prior to)/i.test(text)) return "approval-required";
-  if (/no (?:need|requirement) (?:for|to request) assignment|assignment (?:is )?not required|(?:you may|feel free to) (?:start working|begin implementation) without (?:an )?assignment/i.test(text)) return "direct";
+  if (/no (?:need|requirement) (?:for|to request|to wait for) (?:an? )?assignment|(?:do not|don['’]t) need to (?:ask|wait) .{0,40}assign|assignment (?:is )?not required|(?:you may|feel free to) (?:start working|begin implementation) without (?:an )?assignment/i.test(text)) return "direct";
+  if (/(?:must|need(?:s)? to|required to|please)\s+(?:be\s+)?assign|request (?:an )?assignment|\/assign\b|@[a-z0-9_-]*bot\s+(?:claim|assign)\b|ask (?:for )?(?:the issue|this issue|it) to be assigned to you|(?:leave|post) .{0,50}comment.{0,100}(?:claim|assign)/i.test(text)) return "assignment-required";
+  if (/(?:discuss|propose|describe|share) (?:the |your )?(?:approach|proposal|solution).{0,80}(?:before|prior to) (?:you )?(?:start|begin|implement|submit)|(?:approval|maintainer confirmation) (?:is )?required (?:before|prior to)|(?:wait for|receive|obtain) (?:maintainer )?(?:approval|confirmation) (?:before|prior to)|issue with (?:the |your )?proposal.{0,100}(?:submitted|opened|created) first/i.test(text)) return "approval-required";
   return null;
 }
 
-function makePolicy(issue: GitHubIssue, comments: GitHubComment[] | null, guideText: string | null, contributionFile: ContentFile | null, checkedAt: string): AssignmentPolicy {
+function makePolicy(issue: GitHubIssue, comments: GitHubComment[] | null, documents: DocumentationDocument[], checkedAt: string): AssignmentPolicy {
   const issueSignals: Array<{ kind: AssignmentPolicyKind; source: Source }> = [];
   const bodySignal = policySignal(issue.body);
   if (bodySignal) issueSignals.push({ kind: bodySignal, source: { label: `Issue #${issue.number} instructions`, href: issue.html_url, kind: "issue" } });
@@ -176,9 +298,11 @@ function makePolicy(issue: GitHubIssue, comments: GitHubComment[] | null, guideT
   const distinctIssueSignals = [...new Set(issueSignals.map((signal) => signal.kind))];
   if (distinctIssueSignals.length > 1) return { kind: "varies", label: "Policy varies by issue", detail: "Current issue instructions conflict. Check with a maintainer before starting.", checkedAt, source: issueSignals[0].source };
   const signal = issueSignals[0];
-  const guideSignal = policySignal(guideText);
+  const botDocument = documents.find((document) => /@[a-z0-9_-]*bot\s+(?:claim|assign)\b/i.test(document.text));
+  const guideDocument = botDocument ?? documents.find((document) => policySignal(document.text));
+  const guideSignal = botDocument ? "assignment-required" : policySignal(guideDocument?.text);
   const selected = signal?.kind ?? guideSignal ?? "unknown";
-  const source = signal?.source ?? (guideSignal && contributionFile?.html_url ? { label: "CONTRIBUTING.md", href: contributionFile.html_url, kind: "guide" as const } : undefined);
+  const source = signal?.source ?? (guideSignal ? guideDocument?.source : undefined);
   const labels: Record<AssignmentPolicyKind, string> = {
     "assignment-required": "Request assignment first", "approval-required": "Discuss your approach first", direct: "Open to contributions",
     varies: "Policy varies by issue", unknown: "Check with maintainer",
@@ -193,46 +317,41 @@ function makePolicy(issue: GitHubIssue, comments: GitHubComment[] | null, guideT
   return { kind: selected, label: labels[selected], detail: details[selected], checkedAt, source };
 }
 
-function makeRepositoryGuidance(repo: GitHubRepo, guideText: string | null, readmeText: string | null, contributionFile: ContentFile | null, readmeFile: ContentFile | null, checkedAt: string): RepositoryGuidance {
-  const docs = `${guideText ?? ""}\n${readmeText ?? ""}`;
-  const guideSignal = policySignal(guideText);
-  const readmeSignal = policySignal(readmeText);
-  const signal = guideSignal ?? readmeSignal;
-  const guideBotClaim = guideText?.match(/(@[a-z0-9_-]*bot)\s+(claim|assign)\b/i);
-  const readmeBotClaim = readmeText?.match(/(@[a-z0-9_-]*bot)\s+(claim|assign)\b/i);
-  const botClaim = guideBotClaim ?? readmeBotClaim;
-  const contributionSource: Source | undefined = contributionFile?.html_url ? { label: "CONTRIBUTING.md", href: contributionFile.html_url, kind: "guide" } : undefined;
-  const readmeSource: Source | undefined = readmeFile?.html_url ? { label: "README", href: readmeFile.html_url, kind: "guide" } : undefined;
-  const source = guideBotClaim
-    ? contributionSource
-    : readmeBotClaim
-      ? readmeSource
-      : guideSignal
-        ? contributionSource
-        : readmeSignal
-          ? readmeSource
-          : contributionSource ?? readmeSource ?? { label: `${repo.full_name} repository`, href: repo.html_url, kind: "official" as const };
+function makeRepositoryGuidance(repo: GitHubRepo, documents: DocumentationDocument[], checkedAt: string): RepositoryGuidance {
+  const docs = documents.map((document) => document.text).join("\n");
+  const botDocument = documents.find((document) => /(@[a-z0-9_-]*bot)\s+(claim|assign)\b/i.test(document.text));
+  const botClaim = botDocument?.text.match(/(@[a-z0-9_-]*bot)\s+(claim|assign)\b/i);
+  const signalDocument = documents.find((document) => policySignal(document.text));
+  const signal = policySignal(signalDocument?.text);
+  const source = botDocument?.source ?? signalDocument?.source ?? documents[0]?.source ?? { label: `${repo.full_name} repository`, href: repo.html_url, kind: "official" as const };
+  const detailedSteps = assignmentSteps(botDocument?.text ?? signalDocument?.text ?? docs, botClaim ? `${botClaim[1]} ${botClaim[2].toLowerCase()}` : undefined);
+  const hasDocumentedProcedure = Boolean(signal || botClaim || detailedSteps.length);
   const assignment = botClaim
-    ? `Use \`${botClaim[1]} ${botClaim[2].toLowerCase()}\` in the issue thread; do not rely on a plain “I’m working on this” comment.`
+    ? `Use \`${botClaim[1]} ${botClaim[2].toLowerCase()}\` in the issue thread. Follow the repository’s other claim prerequisites below.`
     : signal === "assignment-required"
-      ? "Request assignment using the repository’s documented process before starting implementation."
+      ? "Request assignment in the issue thread only after completing the repository’s documented prerequisites."
       : signal === "approval-required"
         ? "Discuss the approach and wait for maintainer approval before starting implementation."
         : signal === "direct"
           ? "The repository documentation allows direct contributions; recheck the issue for competing work first."
+          : detailedSteps.length
+            ? "Follow the repository’s documented contribution steps below, then check the issue’s current instructions before starting."
           : "No assignment rule was confirmed in the checked repository documentation. Open an issue below and follow its current instructions before starting.";
   const beforeStarting = [
-    contributionFile ? "Read the linked contribution guide before changing code." : readmeFile ? "Read the linked README before changing code." : null,
+    documents.length ? "Read the linked repository instructions before changing code." : null,
     /(?:install|setup|getting started|development environment|prerequisites)/i.test(docs) ? "Complete the documented development setup first." : null,
     /(?:npm test|pnpm test|yarn test|pytest|cargo test|go test|gradle.*test|testing)/i.test(docs) ? "Run the documented checks for the area you change." : null,
   ].filter((point): point is string => Boolean(point));
   if (beforeStarting.length <= 1) beforeStarting.push("No setup or test requirement was safely extracted; verify the linked documentation for your change.");
-  const avoid = signal === "assignment-required"
+  const extractedAvoid = specificAvoidRules(signalDocument?.text ?? botDocument?.text ?? docs);
+  const avoid = extractedAvoid.length ? extractedAvoid : signal === "assignment-required"
     ? ["Do not begin implementation before assignment is confirmed.", "Do not expand the issue’s scope without maintainer agreement."]
     : signal === "approval-required"
       ? ["Do not submit an implementation before the proposed approach is approved.", "Do not mix unrelated cleanup into the contribution."]
       : ["No repository-specific prohibition was safely extracted. Recheck the selected issue for current instructions and competing work."];
-  return { assignment, assignmentEvidence: signal || botClaim ? "documented" : "not-found", beforeStarting, avoid, source, checkedAt };
+  const primaryContributionSource = documents.find((document) => /contribution guide|contributing/i.test(document.source.label))?.source;
+  const sources = [...new Map([primaryContributionSource, source].filter((item): item is Source => Boolean(item)).map((item) => [item.href, item])).values()];
+  return { assignment, assignmentSteps: detailedSteps, assignmentEvidence: hasDocumentedProcedure ? "documented" : "not-found", beforeStarting, avoid, source, sources, checkedAt };
 }
 
 function applyIssueGuidance(base: RepositoryGuidance, issue: GitHubIssue, comments: GitHubComment[] | null): RepositoryGuidance {
@@ -245,11 +364,14 @@ function applyIssueGuidance(base: RepositoryGuidance, issue: GitHubIssue, commen
   const botInstruction = evidence.find(({ text }) => /@[a-z0-9_-]*bot\s+(?:claim|assign)\b/i.test(text ?? ""));
   const botCommand = botInstruction?.text?.match(/(@[a-z0-9_-]*bot)\s+(claim|assign)\b/i);
   if (botInstruction && botCommand) {
+    const issueSteps = assignmentSteps(botInstruction.text ?? "", `${botCommand[1]} ${botCommand[2].toLowerCase()}`);
     return {
       ...base,
       assignment: `Comment \`${botCommand[1]} ${botCommand[2].toLowerCase()}\` on the issue and wait for the bot or maintainers to confirm the claim before coding.`,
+      assignmentSteps: [...new Set([...(base.assignmentSteps ?? []), ...issueSteps])].slice(0, 8),
       assignmentEvidence: "issue-specific",
       source: botInstruction.source,
+      sources: [...new Map([...(base.sources ?? (base.source ? [base.source] : [])), botInstruction.source].map((source) => [source.href, source])).values()],
     };
   }
   const policyInstruction = evidence.map((entry) => ({ ...entry, signal: policySignal(entry.text) })).find((entry) => entry.signal);
@@ -262,8 +384,10 @@ function applyIssueGuidance(base: RepositoryGuidance, issue: GitHubIssue, commen
     return {
       ...base,
       assignment: assignmentByKind[policyInstruction.signal!] ?? base.assignment,
+      assignmentSteps: [...new Set([...(base.assignmentSteps ?? []), ...assignmentSteps(policyInstruction.text ?? "")])].slice(0, 8),
       assignmentEvidence: "issue-specific",
       source: policyInstruction.source,
+      sources: [...new Map([...(base.sources ?? (base.source ? [base.source] : [])), policyInstruction.source].map((source) => [source.href, source])).values()],
     };
   }
   const gatedSubmission = evidence.find(({ text }) => /(?:do not|don['’]t|please avoid)\s+(?:open|submit|create)\s+(?:a\s+)?(?:pull request|pr|solution|implementation)/i.test(text ?? ""));
@@ -327,16 +451,24 @@ async function getRepositoryContext(issue: GitHubIssue, labels: string[], force:
   const cacheKey = `${path}:${deepQuality ? "deep" : "feed"}`;
   if (!cache.has(cacheKey)) cache.set(cacheKey, (async () => {
     const [repo, topLevelContributionFile, readmeFile, communityProfile] = await Promise.all([
-      getJson<GitHubRepo>(issue.repository_url, false),
-      getJson<ContentFile>(`/repos/${path}/contents/CONTRIBUTING.md`, false, true),
-      getJson<ContentFile>(`/repos/${path}/readme`, false, true),
-      getJson<CommunityProfile>(`/repos/${path}/community/profile`, false, true),
+      getJson<GitHubRepo>(issue.repository_url, force),
+      getJson<ContentFile>(`/repos/${path}/contents/CONTRIBUTING.md`, force, true),
+      getJson<ContentFile>(`/repos/${path}/readme`, force, true),
+      getJson<CommunityProfile>(`/repos/${path}/community/profile`, force, true),
     ]).catch(() => [null, null, null, null] as const);
     if (!repo || repo.archived || repo.disabled || isPracticeRepository(repo)) return null;
     const communityGuideUrl = communityProfile?.files?.contributing?.url;
-    const contributionFile = topLevelContributionFile ?? (communityGuideUrl ? await getJson<ContentFile>(communityGuideUrl, false, true) : null);
-    const guideText = decodeFile(contributionFile);
+    const contributionFile = topLevelContributionFile ?? (communityGuideUrl ? await getJson<ContentFile>(communityGuideUrl, force, true) : null);
+    const primaryGuideText = decodeFile(contributionFile);
     const readmeText = decodeFile(readmeFile);
+    const primaryDocuments: DocumentationDocument[] = [];
+    if (primaryGuideText && contributionFile?.html_url) primaryDocuments.push({ text: primaryGuideText, source: { label: "Contribution guide", href: contributionFile.html_url, kind: "guide" } });
+    if (readmeText && readmeFile?.html_url) primaryDocuments.push({ text: readmeText, source: { label: "README", href: readmeFile.html_url, kind: "guide" } });
+    const linkedCandidates = linkedDocumentationCandidates(path, primaryDocuments);
+    const linkedCandidateLimit = deepQuality ? 2 : 1;
+    const linkedDocuments = (await Promise.all(linkedCandidates.slice(0, linkedCandidateLimit).map((candidate) => fetchLinkedDocument(candidate, force).catch(() => null)))).filter((document): document is DocumentationDocument => Boolean(document));
+    const documents = [primaryDocuments[0], ...linkedDocuments, ...primaryDocuments.slice(1)].filter((document): document is DocumentationDocument => Boolean(document));
+    const guideText = [primaryGuideText, ...linkedDocuments.map((document) => document.text)].filter(Boolean).join("\n") || null;
     if (CLOSED_TO_CONTRIBUTIONS_PATTERN.test(`${guideText ?? ""}\n${readmeText ?? ""}`)) return null;
     const cataloged = isCatalogRepository(path);
     const ageDays = repo.created_at ? (Date.parse(checkedAt) - Date.parse(repo.created_at)) / 86_400_000 : 0;
@@ -345,8 +477,8 @@ async function getRepositoryContext(issue: GitHubIssue, labels: string[], force:
     const maintenance = repositoryQuality.factors.find((factor) => factor.key === "maintenance")?.earned;
     const newcomerMerges = repositoryQuality.factors.find((factor) => factor.key === "newcomers")?.mergedCount ?? 0;
     if (!cataloged && ((!maintenance || maintenance <= 0) || newcomerMerges < 1)) return null;
-    const repositoryGuidance = makeRepositoryGuidance(repo, guideText, readmeText, contributionFile, readmeFile, checkedAt);
-    return { repo, contributionFile, guideText, readmeText, repositoryQuality, repositoryGuidance };
+    const repositoryGuidance = makeRepositoryGuidance(repo, documents, checkedAt);
+    return { repo, contributionFile, guideText, readmeText, documents, repositoryQuality, repositoryGuidance };
   })());
   return cache.get(cacheKey)!;
 }
@@ -364,10 +496,10 @@ async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: stri
     getJson<TimelineEvent[]>(`/repos/${owner}/${repoName}/issues/${issue.number}/timeline?per_page=50`, force, true, false),
   ]).catch(() => [null, null, null] as const);
   if (!context) return null;
-  const { repo, contributionFile, guideText, readmeText, repositoryQuality, repositoryGuidance } = context;
+  const { repo, contributionFile, guideText, readmeText, documents, repositoryQuality, repositoryGuidance } = context;
   const issueAwareRepositoryGuidance = applyIssueGuidance(repositoryGuidance, issue, comments);
 
-  const policy = makePolicy(issue, comments, guideText, contributionFile, checkedAt);
+  const policy = makePolicy(issue, comments, documents, checkedAt);
   const recentClaim = comments?.find((comment) => !isMaintainer(comment.author_association) && !isBot(comment.user) && CLAIM_PATTERN.test(comment.body ?? "") && Date.parse(comment.created_at) >= Date.parse(checkedAt) - 30 * 86_400_000);
   const references = (timeline ?? []).filter((event) => event.event === "cross-referenced" && event.source?.issue?.pull_request).map((event) => event.source!.issue!);
   const openImplementations = references.filter((pr) => pr.state === "open" && closesIssue(pr.body, owner, repoName, issue.number));
@@ -386,6 +518,7 @@ async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: stri
   const commands = extractCommands(issue.body, guideText, readmeText);
   const sources: Source[] = [{ label: `GitHub issue #${issue.number}`, href: issue.html_url, kind: "issue" }, { label: `${repo.full_name} repository`, href: repo.html_url, kind: "official" }];
   if (contributionFile?.html_url) sources.push({ label: "CONTRIBUTING.md", href: contributionFile.html_url, kind: "guide" });
+  if (repositoryGuidance.source && !sources.some((source) => source.href === repositoryGuidance.source?.href)) sources.push(repositoryGuidance.source);
   references.slice(0, 3).forEach((pr, index) => { if (pr.html_url) sources.push({ label: pr.title || `Timeline-referenced PR ${index + 1}`, href: pr.html_url, kind: "pull-request" }); });
   const referenceUncertainty = unclearOpenReferences.length ? `${unclearOpenReferences.length} open PR reference${unclearOpenReferences.length === 1 ? " was" : "s were"} found, but closing-keyword context did not establish that the PR implements this issue.` : "";
   const statusDetail = blocked ? `A blocking label is currently applied: ${labels.filter((label) => BLOCKED_LABEL_PATTERN.test(label)).join(", ")}.` : issue.assignee ? `The issue is assigned to @${issue.assignee.login}.` : claimedByLabel ? `A visible work-state label is applied: ${labels.filter((label) => CLAIMED_LABEL_PATTERN.test(label)).join(", ")}.`
@@ -578,5 +711,9 @@ export async function getRepositoryOpportunityData(owner: string, repo: string, 
 }
 
 export { closesIssue as referencesIssueWithClosingKeyword, policySignal as detectAssignmentPolicySignal };
+export const findLinkedContributionDocuments = linkedDocumentationCandidates;
+export function summarizeRepositoryGuidance(repoFullName: string, repositoryUrl: string, documents: DocumentationDocument[], checkedAt = new Date().toISOString()) {
+  return makeRepositoryGuidance({ full_name: repoFullName, html_url: repositoryUrl } as GitHubRepo, documents, checkedAt);
+}
 export const isClaimedWorkLabel = (label: string) => CLAIMED_LABEL_PATTERN.test(label);
 export const isStaleWorkLabel = (label: string) => STALE_LABEL_PATTERN.test(label);

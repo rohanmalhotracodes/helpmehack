@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="HelpMeHack terminal mark">
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#0b0d0e"/>
+  <rect x="3" y="3" width="58" height="58" rx="13" fill="none" stroke="#34383c" stroke-width="2"/>
+  <path d="M14 17.5 31.5 32 14 46.5" fill="none" stroke="#f8fafc" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M37 45.5h14" fill="none" stroke="#00d68f" stroke-width="8" stroke-linecap="round"/>
+</svg>
