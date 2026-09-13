@@ -1,12 +1,13 @@
 import { isHumanMaintainerEvent, scoreIssue, scoreRepository, type PullObservation } from "./ranking";
 import { buildCatalogSearchGroups, isCatalogRepository, labelsForCatalogRepository, REPOSITORY_CATALOG } from "./repository-catalog";
+import { githubAuthenticationLabel, githubAuthorization, hasGitHubAppCredentials, hasGitHubAuthentication } from "./github-auth";
 import type { AssignmentPolicy, AssignmentPolicyKind, AvailabilityStatus, Experience, Guidance, OpenSourceOpportunity, OpportunityPayload, RepositoryGuidance, RepositoryQuality, Source } from "./types";
 
 const API_ROOT = "https://api.github.com";
 const API_VERSION = "2026-03-10";
 const WINDOW_DAYS = 90;
 const MAX_ISSUES_PER_REPOSITORY = 1;
-const MAX_FEED_ISSUES = process.env.GITHUB_TOKEN ? 36 : 9;
+const MAX_FEED_ISSUES = hasGitHubAuthentication() ? 36 : 9;
 const CLAIM_PATTERN = /(?:\bi(?:'m| am|’m| would be| can| will|'ll|’ll| want to| would like to)\b.{0,45}\b(?:work|take|pick|handle|implement|fix)|\bassign (?:this to )?me\b|\/assign\b|\bworking on this\b)/i;
 const ASK_LABEL_PATTERN = /(?:discussion|needs approval|proposal|needs design|needs info)/i;
 const BLOCKED_LABEL_PATTERN = /(?:^|\b)(?:blocked|on hold|waiting)(?:$|\b)/i;
@@ -55,20 +56,26 @@ const languageColors: Record<string, string> = {
   Ruby: "#701516", PHP: "#4f5d95", Kotlin: "#a97bff", Swift: "#f05138", C: "#555555", "C++": "#f34b7d", "C#": "#178600", Shell: "#89e051",
 };
 
-function headers() {
+async function headers(forceAuthRefresh = false) {
   const value: Record<string, string> = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": API_VERSION, "User-Agent": "helpmehack.com" };
-  if (process.env.GITHUB_TOKEN) value.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const authorization = await githubAuthorization(fetch, forceAuthRefresh);
+  if (authorization) value.Authorization = authorization;
   return value;
 }
 
 async function githubFetch(path: string, force: boolean, cacheable = true, etag?: string) {
-  const revalidate = process.env.GITHUB_TOKEN ? 900 : 3600;
-  const requestHeaders = headers();
+  const revalidate = hasGitHubAuthentication() ? 900 : 3600;
+  const requestHeaders = await headers();
   if (etag) requestHeaders["If-None-Match"] = etag;
   const options: FetchOptions = force || !cacheable
     ? { headers: requestHeaders, cache: "no-store" }
     : { headers: requestHeaders, cache: "force-cache", next: { revalidate, tags: ["github-opportunities"] } };
-  return fetch(path.startsWith("http") ? path : `${API_ROOT}${path}`, options);
+  const url = path.startsWith("http") ? path : `${API_ROOT}${path}`;
+  const response = await fetch(url, options);
+  if (response.status !== 401 || !hasGitHubAppCredentials()) return response;
+  const refreshedHeaders = await headers(true);
+  if (etag) refreshedHeaders["If-None-Match"] = etag;
+  return fetch(url, { ...options, headers: refreshedHeaders });
 }
 
 async function getJson<T>(path: string, force: boolean, optional = false, cacheable = true): Promise<T | null> {
@@ -450,7 +457,7 @@ function mergeCandidatePools(pools: Candidate[][], maxPerRepository = MAX_FEED_I
 async function enrichCandidates(candidates: Candidate[], force: boolean, checkedAt: string, deepQuality: boolean) {
   const records: OpenSourceOpportunity[] = [];
   const repositoryCache = new Map<string, Promise<RepositoryContext | null>>();
-  const concurrency = process.env.GITHUB_TOKEN ? 8 : 2;
+  const concurrency = hasGitHubAuthentication() ? 8 : 2;
   for (let index = 0; index < candidates.length; index += concurrency) {
     const batch = await Promise.all(candidates.slice(index, index + concurrency).map((candidate) => enrichIssue(candidate, force, checkedAt, repositoryCache, deepQuality)));
     for (const item of batch) if (item?.eligibleForDefault) records.push(item);
@@ -459,14 +466,14 @@ async function enrichCandidates(candidates: Candidate[], force: boolean, checked
 }
 
 export class GitHubOpportunityProvider {
-  readonly label = process.env.GITHUB_TOKEN ? "GitHub REST API · authenticated" : "GitHub REST API · public access";
+  get label() { return githubAuthenticationLabel(); }
   private cachedPayload?: OpportunityPayload;
   private cacheExpiresAt = 0;
 
   async getAll(force = false): Promise<OpportunityPayload> {
     if (!force && this.cachedPayload && Date.now() < this.cacheExpiresAt) return this.cachedPayload;
     const updatedSince = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10);
-    const authenticated = Boolean(process.env.GITHUB_TOKEN);
+    const authenticated = hasGitHubAuthentication();
     const allGroups = buildCatalogSearchGroups(REPOSITORY_CATALOG);
     const catalogSearches = (authenticated
       ? allGroups
@@ -496,9 +503,9 @@ export class GitHubOpportunityProvider {
     const limit = Number(rateResponse.headers.get("x-ratelimit-limit") ?? "0");
     const resetEpoch = Number(rateResponse.headers.get("x-ratelimit-reset") ?? "0");
     const payload: OpportunityPayload = { records, checkedAt, mode: "live", providerLabel: this.label, rateLimit: resetEpoch ? { remaining, limit, resetAt: new Date(resetEpoch * 1000).toISOString() } : undefined };
-    payload.refreshIntervalMs = process.env.GITHUB_TOKEN ? 15 * 60_000 : 60 * 60_000;
+    payload.refreshIntervalMs = authenticated ? 15 * 60_000 : 60 * 60_000;
     this.cachedPayload = payload;
-    this.cacheExpiresAt = Date.now() + (process.env.GITHUB_TOKEN ? 15 * 60_000 : 60 * 60_000);
+    this.cacheExpiresAt = Date.now() + (authenticated ? 15 * 60_000 : 60 * 60_000);
     return payload;
   }
 }
@@ -519,8 +526,8 @@ export async function getRepositoryOpportunityData(owner: string, repo: string, 
     records,
     checkedAt,
     mode: "live",
-    providerLabel: process.env.GITHUB_TOKEN ? "GitHub REST API · authenticated" : "GitHub REST API · public access",
-    refreshIntervalMs: process.env.GITHUB_TOKEN ? 15 * 60_000 : 60 * 60_000,
+    providerLabel: githubAuthenticationLabel(),
+    refreshIntervalMs: hasGitHubAuthentication() ? 15 * 60_000 : 60 * 60_000,
   };
 }
 

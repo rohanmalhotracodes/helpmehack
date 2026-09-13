@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hasGitHubAuthentication } from "@/lib/github-auth";
 import { getOpportunityData } from "@/lib/provider";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +8,7 @@ let lastManualCheck = 0;
 
 export async function GET(request: Request) {
   const force = new URL(request.url).searchParams.get("force") === "1";
-  const cooldown = process.env.GITHUB_TOKEN ? 60_000 : 3_600_000;
+  const cooldown = hasGitHubAuthentication() ? 60_000 : 3_600_000;
   const elapsed = Date.now() - lastManualCheck;
   if (force && lastManualCheck && elapsed < cooldown) {
     const retryAfter = Math.ceil((cooldown - elapsed) / 1000);

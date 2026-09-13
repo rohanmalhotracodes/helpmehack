@@ -24,13 +24,18 @@ npm run build
 
 The UI consumes the `OpportunityProvider` interface in `lib/provider.ts`. The GitHub implementation searches current public `good first issue` and `help wanted` records, then checks repository metadata, recent comments, timeline-linked pull requests, README content, and the repository’s contribution guide through GitHub’s community profile. All GitHub requests run server-side.
 
-Public access works without setup but is limited by GitHub to 60 core requests per hour per originating IP. For a higher limit, copy `.env.example` to `.env.local` and add a fine-grained token that can read public repositories:
+Public access works without setup but is limited by GitHub to 60 core requests per hour per originating IP. For production, configure a read-only GitHub App installation:
 
 ```bash
-GITHUB_TOKEN=github_pat_...
+GITHUB_APP_ID=123456
+# Optional when this App has exactly one installation
+GITHUB_APP_INSTALLATION_ID=
+GITHUB_APP_PRIVATE_KEY_BASE64=base64_encoded_pem
 ```
 
-The token is read only in server code. Current issue evidence is cached for 15 minutes with a token and one hour without one; repository behavior is retained for a day, while contribution documents and issue-specific policy evidence refresh with the current-issue cycle. Manual public refreshes are throttled to once per hour. Rechecks use stored ETags for conditional requests where GitHub supplies them. Failed refreshes preserve the client’s last good snapshot and mark it stale.
+The App needs read-only repository permissions for Contents, Issues, Pull requests, and Metadata. Convert the downloaded PEM with `base64 -i your-app.private-key.pem | tr -d '\n'`. A `SHA256:...` public-key fingerprint is not the private key. If the App has exactly one installation, HelpMeHack discovers its installation ID automatically; set `GITHUB_APP_INSTALLATION_ID` only when the App has multiple installations. HelpMeHack signs a short-lived App JWT, exchanges it for a one-hour installation token, caches that token, and renews it five minutes before expiration. `GITHUB_TOKEN` remains supported as a fallback if the App credentials are missing or a token exchange fails.
+
+All credentials are read only in server code. Current issue evidence is cached for 15 minutes with authenticated access and one hour without it; repository behavior is retained for a day, while contribution documents and issue-specific policy evidence refresh with the current-issue cycle. Manual public refreshes are throttled to once per hour. Rechecks use stored ETags for conditional requests where GitHub supplies them. Failed refreshes preserve the client’s last good snapshot and mark it stale.
 
 For unattended refreshes, set `REFRESH_SECRET` on the deployed site, then add `HELPMEHACK_URL` and the same `REFRESH_SECRET` as GitHub repository secrets. The included workflow calls the protected refresh endpoint at minute 17 of every hour and can also be run manually. This warms the deployed process; durable cross-instance snapshots will require a database or shared cache when the site is scaled beyond one instance.
 
