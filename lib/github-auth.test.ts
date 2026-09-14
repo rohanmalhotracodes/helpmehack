@@ -7,6 +7,7 @@ const original = {
   installationId: process.env.GITHUB_APP_INSTALLATION_ID,
   privateKey: process.env.GITHUB_APP_PRIVATE_KEY,
   privateKeyBase64: process.env.GITHUB_APP_PRIVATE_KEY_BASE64,
+  discoveryToken: process.env.GITHUB_DISCOVERY_TOKEN,
   token: process.env.GITHUB_TOKEN,
 };
 
@@ -25,11 +26,22 @@ afterEach(() => {
   restore("GITHUB_APP_INSTALLATION_ID", original.installationId);
   restore("GITHUB_APP_PRIVATE_KEY", original.privateKey);
   restore("GITHUB_APP_PRIVATE_KEY_BASE64", original.privateKeyBase64);
+  restore("GITHUB_DISCOVERY_TOKEN", original.discoveryToken);
   restore("GITHUB_TOKEN", original.token);
   resetGitHubAppTokenCacheForTests();
 });
 
 describe("GitHub App authentication", () => {
+  it("prefers an explicitly configured discovery-token alternative", async () => {
+    configureApp();
+    process.env.GITHUB_DISCOVERY_TOKEN = "discovery-token";
+    const fetcher = vi.fn();
+
+    await expect(githubAuthorization(fetcher as typeof fetch)).resolves.toBe("Bearer discovery-token");
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(githubAuthenticationLabel()).toBe("GitHub REST API · authenticated");
+  });
+
   it("creates a short-lived RS256 app JWT", () => {
     configureApp();
     const now = Date.parse("2026-09-13T00:00:00Z");

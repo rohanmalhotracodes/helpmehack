@@ -1,5 +1,6 @@
 import { demoOpportunities } from "./data";
 import { GitHubOpportunityProvider } from "./github-provider";
+import { getIndexedOpportunityData, seedOpportunityIndex } from "./opportunity-indexer";
 import type { OpportunityPayload } from "./types";
 
 export interface OpportunityProvider {
@@ -26,8 +27,14 @@ const demoProvider: OpportunityProvider = new DemoOpportunityProvider();
 
 export async function getOpportunityData(options: { force?: boolean; fallbackToDemo?: boolean } = {}) {
   const { force = false, fallbackToDemo = true } = options;
+  if (!force) {
+    const indexed = await getIndexedOpportunityData().catch(() => null);
+    if (indexed) return indexed;
+  }
   try {
-    return await githubProvider.getAll(force);
+    const payload = await githubProvider.getAll(force);
+    await seedOpportunityIndex(payload).catch(() => false);
+    return payload;
   } catch (error) {
     if (!fallbackToDemo) throw error;
     const demo = await demoProvider.getAll();

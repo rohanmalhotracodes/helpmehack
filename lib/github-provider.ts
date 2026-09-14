@@ -49,6 +49,7 @@ type RepositorySearchResponse = { items: GitHubRepo[] };
 type FetchOptions = RequestInit & { next?: { revalidate: number; tags?: string[] } };
 type DiscoveryTier = NonNullable<OpenSourceOpportunity["discoveryTiers"]>[number];
 type Candidate = { issue: GitHubIssue; tiers: DiscoveryTier[]; matchingIssueCount: number };
+export type RepositoryDiscoverySeed = { fullName: string; tiers: DiscoveryTier[] };
 export type DocumentationDocument = { text: string; source: Source };
 type LinkedDocumentCandidate = { href: string; rawUrl: string; label: string; score: number };
 type RepositoryContext = {
@@ -446,9 +447,9 @@ async function getRepositoryQuality(repo: GitHubRepo, guideText: string | null, 
   return value;
 }
 
-async function getRepositoryContext(issue: GitHubIssue, labels: string[], force: boolean, checkedAt: string, cache: Map<string, Promise<RepositoryContext | null>>, deepQuality: boolean) {
+async function getRepositoryContext(issue: GitHubIssue, labels: string[], force: boolean, checkedAt: string, cache: Map<string, Promise<RepositoryContext | null>>, deepQuality: boolean, indexedDiscovery = false) {
   const path = issue.repository_url.replace(`${API_ROOT}/repos/`, "");
-  const cacheKey = `${path}:${deepQuality ? "deep" : "feed"}`;
+  const cacheKey = `${path}:${deepQuality ? "deep" : indexedDiscovery ? "index" : "feed"}`;
   if (!cache.has(cacheKey)) cache.set(cacheKey, (async () => {
     const [repo, topLevelContributionFile, readmeFile, communityProfile] = await Promise.all([
       getJson<GitHubRepo>(issue.repository_url, force),
@@ -472,18 +473,24 @@ async function getRepositoryContext(issue: GitHubIssue, labels: string[], force:
     if (CLOSED_TO_CONTRIBUTIONS_PATTERN.test(`${guideText ?? ""}\n${readmeText ?? ""}`)) return null;
     const cataloged = isCatalogRepository(path);
     const ageDays = repo.created_at ? (Date.parse(checkedAt) - Date.parse(repo.created_at)) / 86_400_000 : 0;
-    if (!cataloged && (repo.owner.type !== "Organization" || repo.stargazers_count < 10_000 || repo.forks_count < 500 || ageDays < 365 || !guideText || DIRECTORY_REPOSITORY_PATTERN.test(`${repo.name} ${repo.description ?? ""}`))) return null;
-    const repositoryQuality = await getRepositoryQuality(repo, guideText, readmeText, labels, checkedAt, force, deepQuality || !cataloged);
+    if (!cataloged) {
+      const minimumStars = indexedDiscovery ? 100 : 10_000;
+      const minimumForks = indexedDiscovery ? 10 : 500;
+      const minimumAgeDays = indexedDiscovery ? 180 : 365;
+      if (repo.stargazers_count < minimumStars || repo.forks_count < minimumForks || ageDays < minimumAgeDays || !guideText || DIRECTORY_REPOSITORY_PATTERN.test(`${repo.name} ${repo.description ?? ""}`)) return null;
+      if (!indexedDiscovery && repo.owner.type !== "Organization") return null;
+    }
+    const repositoryQuality = await getRepositoryQuality(repo, guideText, readmeText, labels, checkedAt, force, deepQuality || (!cataloged && !indexedDiscovery));
     const maintenance = repositoryQuality.factors.find((factor) => factor.key === "maintenance")?.earned;
     const newcomerMerges = repositoryQuality.factors.find((factor) => factor.key === "newcomers")?.mergedCount ?? 0;
-    if (!cataloged && ((!maintenance || maintenance <= 0) || newcomerMerges < 1)) return null;
+    if (!cataloged && ((!maintenance || maintenance <= 0) || (!indexedDiscovery && newcomerMerges < 1))) return null;
     const repositoryGuidance = makeRepositoryGuidance(repo, documents, checkedAt);
     return { repo, contributionFile, guideText, readmeText, documents, repositoryQuality, repositoryGuidance };
   })());
   return cache.get(cacheKey)!;
 }
 
-async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: string, repositoryCache: Map<string, Promise<RepositoryContext | null>>, deepQuality: boolean): Promise<OpenSourceOpportunity | null> {
+async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: string, repositoryCache: Map<string, Promise<RepositoryContext | null>>, deepQuality: boolean, indexedDiscovery = false): Promise<OpenSourceOpportunity | null> {
   const { issue, tiers } = candidate;
   const path = issue.repository_url.replace(`${API_ROOT}/repos/`, "");
   const [owner, repoName] = path.split("/");
@@ -491,7 +498,7 @@ async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: stri
   const labels = labelNames(issue.labels);
   const repositoryLabels = tiers.includes("beginner") ? [...labels, "good first issue"] : labels;
   const [context, comments, timeline] = await Promise.all([
-    getRepositoryContext(issue, repositoryLabels, force, checkedAt, repositoryCache, deepQuality),
+    getRepositoryContext(issue, repositoryLabels, force, checkedAt, repositoryCache, deepQuality, indexedDiscovery),
     issue.comments > 0 ? getJson<GitHubComment[]>(`${issue.comments_url}?per_page=30&sort=created&direction=desc`, force, true, false) : Promise.resolve([]),
     getJson<TimelineEvent[]>(`/repos/${owner}/${repoName}/issues/${issue.number}/timeline?per_page=50`, force, true, false),
   ]).catch(() => [null, null, null] as const);
@@ -609,6 +616,38 @@ async function discoverEstablishedRepositories(force: boolean, checkedAt: string
   return issueGroups.flat();
 }
 
+export async function discoverRepositoryUniverse(force = false, target = 500): Promise<RepositoryDiscoverySeed[]> {
+  const pushedSince = new Date(Date.now() - 180 * 86_400_000).toISOString().slice(0, 10);
+  const searches: Array<{ query: string; tiers: DiscoveryTier[] }> = [
+    { query: `archived:false fork:false stars:>=100 pushed:>=${pushedSince} topic:good-first-issue`, tiers: ["beginner"] },
+    { query: `archived:false fork:false stars:>=100 pushed:>=${pushedSince} topic:help-wanted`, tiers: ["moderate"] },
+    { query: `archived:false fork:false stars:>=250 pushed:>=${pushedSince} topic:hacktoberfest`, tiers: ["moderate"] },
+  ];
+  const seeds = new Map<string, RepositoryDiscoverySeed>();
+  for (const entry of REPOSITORY_CATALOG) {
+    const key = entry.repo.toLowerCase();
+    const existing = seeds.get(key);
+    seeds.set(key, { fullName: entry.repo, tiers: [...new Set([...(existing?.tiers ?? []), entry.tier])] });
+  }
+  for (const search of searches) {
+    for (let page = 1; page <= 4 && seeds.size < target; page += 1) {
+      const result = await getJson<RepositorySearchResponse>(`/search/repositories?q=${encodeURIComponent(search.query)}&sort=updated&order=desc&per_page=100&page=${page}`, force, true);
+      const repositories = result?.items ?? [];
+      for (const repo of repositories) {
+        if (isPracticeRepository(repo) || DIRECTORY_REPOSITORY_PATTERN.test(`${repo.name} ${repo.description ?? ""}`)) continue;
+        const key = repo.full_name.toLowerCase();
+        const existing = seeds.get(key);
+        const impact: DiscoveryTier[] = repo.stargazers_count >= 5_000 ? ["high-impact"] : [];
+        seeds.set(key, { fullName: repo.full_name, tiers: [...new Set([...(existing?.tiers ?? []), ...search.tiers, ...impact])] });
+        if (seeds.size >= target) break;
+      }
+      if (repositories.length < 100) break;
+    }
+    if (seeds.size >= target) break;
+  }
+  return [...seeds.values()].slice(0, target);
+}
+
 function mergeCandidatePools(pools: Candidate[][], maxPerRepository = MAX_FEED_ISSUES) {
   const merged = new Map<number, Candidate>();
   const repositoryCounts = new Map<string, number>();
@@ -633,12 +672,12 @@ function mergeCandidatePools(pools: Candidate[][], maxPerRepository = MAX_FEED_I
   return [...merged.values()];
 }
 
-async function enrichCandidates(candidates: Candidate[], force: boolean, checkedAt: string, deepQuality: boolean) {
+async function enrichCandidates(candidates: Candidate[], force: boolean, checkedAt: string, deepQuality: boolean, indexedDiscovery = false) {
   const records: OpenSourceOpportunity[] = [];
   const repositoryCache = new Map<string, Promise<RepositoryContext | null>>();
   const concurrency = hasGitHubAuthentication() ? 8 : 2;
   for (let index = 0; index < candidates.length; index += concurrency) {
-    const batch = await Promise.all(candidates.slice(index, index + concurrency).map((candidate) => enrichIssue(candidate, force, checkedAt, repositoryCache, deepQuality)));
+    const batch = await Promise.all(candidates.slice(index, index + concurrency).map((candidate) => enrichIssue(candidate, force, checkedAt, repositoryCache, deepQuality, indexedDiscovery)));
     for (const item of batch) if (item?.eligibleForDefault) records.push(item);
   }
   return records;
@@ -708,6 +747,27 @@ export async function getRepositoryOpportunityData(owner: string, repo: string, 
     providerLabel: githubAuthenticationLabel(),
     refreshIntervalMs: hasGitHubAuthentication() ? 15 * 60_000 : 60 * 60_000,
   };
+}
+
+export async function getRepositoryIndexRecords(owner: string, repo: string, requestedTiers: DiscoveryTier[] = []): Promise<OpenSourceOpportunity[]> {
+  if (!/^[a-z0-9_.-]{1,100}$/i.test(owner) || !/^[a-z0-9_.-]{1,100}$/i.test(repo)) return [];
+  const path = `/repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=30&labels=`;
+  const discoveryLabels = [...new Set(["good first issue", "help wanted", ...labelsForCatalogRepository(`${owner}/${repo}`)])];
+  const issueGroups = await Promise.all(discoveryLabels.map((label) => getJson<GitHubIssue[]>(`${path}${encodeURIComponent(label)}`, false, true).catch(() => null)));
+  const candidates = mergeCandidatePools(issueGroups.map((issues, index) => {
+    const inferredTier: DiscoveryTier = /good first|first[-\s]timers?|beginner|easy/i.test(discoveryLabels[index]) ? "beginner" : "moderate";
+    return selectCandidates(issues ?? [], inferredTier, 1, 1).map((candidate) => ({
+      ...candidate,
+      tiers: [...new Set([...candidate.tiers, ...requestedTiers])],
+    }));
+  }), 1).slice(0, 1);
+  if (!candidates.length) return [];
+  const records = await enrichCandidates(candidates, false, new Date().toISOString(), false, true);
+  return records.map((record) => {
+    const tiers = new Set(record.discoveryTiers ?? requestedTiers);
+    if ((record.repositoryQuality?.stars ?? 0) >= 5_000 && record.experience !== "Beginner") tiers.add("high-impact");
+    return { ...record, discoveryTiers: [...tiers] };
+  });
 }
 
 export { closesIssue as referencesIssueWithClosingKeyword, policySignal as detectAssignmentPolicySignal };

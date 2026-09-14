@@ -13,7 +13,7 @@ let cachedInstallationToken: { token: string; expiresAt: number } | undefined;
 let cachedInstallationId: string | undefined;
 let installationTokenPromise: Promise<string> | undefined;
 let appExchangeBackoffUntil = 0;
-let activeAuthentication: "app" | "token" | "public" | undefined;
+let activeAuthentication: "app" | "discovery-token" | "token" | "public" | undefined;
 
 function base64Url(value: string | Buffer) {
   return Buffer.from(value).toString("base64url");
@@ -39,12 +39,12 @@ export function hasGitHubAppCredentials() {
 }
 
 export function hasGitHubAuthentication() {
-  return hasGitHubAppCredentials() || Boolean(process.env.GITHUB_TOKEN?.trim());
+  return hasGitHubAppCredentials() || Boolean(process.env.GITHUB_DISCOVERY_TOKEN?.trim()) || Boolean(process.env.GITHUB_TOKEN?.trim());
 }
 
 export function githubAuthenticationLabel() {
-  if (activeAuthentication === "app" || (!activeAuthentication && hasGitHubAppCredentials())) return "GitHub App installation";
-  if (activeAuthentication === "token" || process.env.GITHUB_TOKEN?.trim()) return "GitHub REST API · authenticated";
+  if (activeAuthentication === "app" || (!activeAuthentication && hasGitHubAppCredentials() && !process.env.GITHUB_DISCOVERY_TOKEN?.trim())) return "GitHub App installation";
+  if (activeAuthentication === "discovery-token" || activeAuthentication === "token" || process.env.GITHUB_DISCOVERY_TOKEN?.trim() || process.env.GITHUB_TOKEN?.trim()) return "GitHub REST API · authenticated";
   return "GitHub REST API · public access";
 }
 
@@ -105,6 +105,11 @@ async function resolveInstallationId(fetcher: typeof fetch) {
 }
 
 export async function githubAuthorization(fetcher: typeof fetch = fetch, forceRefresh = false) {
+  const discoveryToken = process.env.GITHUB_DISCOVERY_TOKEN?.trim();
+  if (discoveryToken) {
+    activeAuthentication = "discovery-token";
+    return `Bearer ${discoveryToken}`;
+  }
   if (hasGitHubAppCredentials()) {
     if (forceRefresh) {
       cachedInstallationToken = undefined;

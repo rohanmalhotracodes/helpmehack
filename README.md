@@ -33,11 +33,31 @@ GITHUB_APP_INSTALLATION_ID=
 GITHUB_APP_PRIVATE_KEY_BASE64=base64_encoded_pem
 ```
 
+The configured GitHub App can authenticate reads of public repository data across organizations, so no additional personal token is required for the persistent index. `GITHUB_DISCOVERY_TOKEN` remains an optional read-only alternative for deployments that do not configure a GitHub App.
+
 The App needs read-only repository permissions for Contents, Issues, Pull requests, and Metadata. Convert the downloaded PEM with `base64 -i your-app.private-key.pem | tr -d '\n'`. A `SHA256:...` public-key fingerprint is not the private key. If the App has exactly one installation, HelpMeHack discovers its installation ID automatically; set `GITHUB_APP_INSTALLATION_ID` only when the App has multiple installations. HelpMeHack signs a short-lived App JWT, exchanges it for a one-hour installation token, caches that token, and renews it five minutes before expiration. `GITHUB_TOKEN` remains supported as a fallback if the App credentials are missing or a token exchange fails.
 
 All credentials are read only in server code. Current issue evidence is cached for 15 minutes with authenticated access and one hour without it; repository behavior is retained for a day, while contribution documents and issue-specific policy evidence refresh with the current-issue cycle. Manual public refreshes are throttled to once per hour. Rechecks use stored ETags for conditional requests where GitHub supplies them. Failed refreshes preserve the client’s last good snapshot and mark it stale.
 
-For unattended refreshes, set `REFRESH_SECRET` on the deployed site, then add `HELPMEHACK_URL` and the same `REFRESH_SECRET` as GitHub repository secrets. The included workflow calls the protected refresh endpoint at minute 17 of every hour and can also be run manually. This warms the deployed process; durable cross-instance snapshots will require a database or shared cache when the site is scaled beyond one instance.
+## Persistent repository index
+
+Production can serve a durable repository snapshot from Upstash Redis instead of rebuilding the feed during a visitor request. Create an Upstash Redis integration in the Vercel Marketplace and configure:
+
+```bash
+UPSTASH_REDIS_REST_URL=https://your-database.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_rest_token
+OPPORTUNITY_INDEX_TARGET=500
+OPPORTUNITY_INDEX_BATCH_SIZE=20
+OPPORTUNITY_INDEX_CONCURRENCY=4
+```
+
+The older `KV_REST_API_URL` and `KV_REST_API_TOKEN` aliases are also supported. If Vercel connects the resource with an `UPSTASH_REDIS_REST` custom prefix, the generated `UPSTASH_REDIS_REST_KV_REST_API_URL` and `UPSTASH_REDIS_REST_KV_REST_API_TOKEN` names work as well. Redis credentials remain server-only.
+
+For unattended indexing, set `REFRESH_SECRET` on the deployed site, then add `HELPMEHACK_URL` and the same `REFRESH_SECRET` as GitHub repository secrets. The included workflow calls the protected index worker at minute 17 of every hour and can also be run manually.
+
+The worker refreshes the discovery universe daily, targeting 500 repositories by default. It combines the reviewed catalog with active GitHub repositories carrying `good-first-issue`, `help-wanted`, or `hacktoberfest` topics. An automatically discovered project must still have at least 100 stars, 10 forks, six months of history, recent maintenance evidence, contribution documentation, and a genuinely open contribution-labelled issue. Each hourly run enriches the 20 least-recently checked repositories, retains successful older snapshots when a request fails, and removes a repository’s old card when a successful check finds no eligible issue. At the default settings, the first 500-repository pass completes in roughly 25 hourly runs. Visitor requests read the stored snapshot immediately; opening a card still performs a current, deeper issue check.
+
+Without Redis credentials, the application retains its live GitHub fallback and an in-process cache, but that fallback is not durable across server instances or deployments.
 
 ## Open-source tiers
 
