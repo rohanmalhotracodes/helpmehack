@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rankOpenSourceTiers } from "./open-source-tiers";
+import { isDisplayableOpportunityStatus, rankOpenSourceTiers } from "./open-source-tiers";
 import type { OpenSourceOpportunity, RepositoryQuality } from "./types";
 
 const quality = (stars: number, reputation: number, onboarding: number): RepositoryQuality => ({
@@ -23,6 +23,11 @@ const item = (id: string, overrides: Partial<OpenSourceOpportunity> = {}): OpenS
 });
 
 describe("open-source tier ranking", () => {
+  it("keeps cautious opportunities visible while excluding unavailable work", () => {
+    expect(["unassigned", "ask-first", "possibly-claimed", "unknown"].every((status) => isDisplayableOpportunityStatus(status as OpenSourceOpportunity["status"]))).toBe(true);
+    expect(["linked-pr", "blocked", "closed"].some((status) => isDisplayableOpportunityStatus(status as OpenSourceOpportunity["status"]))).toBe(false);
+  });
+
   it("separates beginner-ready, moderate, and high-impact work", () => {
     const tiers = rankOpenSourceTiers([
       item("beginner"),

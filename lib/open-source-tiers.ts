@@ -17,6 +17,10 @@ export type OpenSourceTier = {
 
 const displayableStatuses = new Set(["unassigned", "ask-first", "possibly-claimed", "unknown"]);
 
+export function isDisplayableOpportunityStatus(status: OpenSourceOpportunity["status"]) {
+  return displayableStatuses.has(status);
+}
+
 function factor(item: OpenSourceOpportunity, key: RepositoryQualityFactor["key"]) {
   const value = item.repositoryQuality?.factors.find((entry) => entry.key === key);
   return value?.earned == null ? 0 : (value.earned / value.weight) * 100;
@@ -76,7 +80,7 @@ function impactReason(item: OpenSourceOpportunity) {
 }
 
 export function rankOpenSourceTiers(records: OpenSourceOpportunity[]): OpenSourceTier[] {
-  const active = records.filter((item) => displayableStatuses.has(item.status));
+  const active = records.filter((item) => isDisplayableOpportunityStatus(item.status));
   const buckets: Record<OpenSourceTierId, RankedContribution[]> = { beginner: [], moderate: [], "high-impact": [] };
 
   for (const item of active) {

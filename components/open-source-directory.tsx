@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Bookmark, ChevronLeft, ChevronRight, CircleDot, Search, Star, X } from "lucide-react";
 import type { RankedContribution } from "@/lib/open-source-tiers";
-import { rankOpenSourceTiers } from "@/lib/open-source-tiers";
+import { isDisplayableOpportunityStatus, rankOpenSourceTiers } from "@/lib/open-source-tiers";
 import type { OpenSourceOpportunity } from "@/lib/types";
 import { Avatar } from "./ui";
 import { NewsletterSignup } from "./newsletter-signup";
@@ -18,7 +18,6 @@ type RankedRepository = {
   rank: number;
 };
 
-const displayableStatuses = new Set(["unassigned", "ask-first", "possibly-claimed", "unknown"]);
 type RepositorySort = "recommended" | "recent" | "adoption";
 
 export function OpenSourceDirectory({ records, savedRepositoryIds, savedIssueIds, onSaveRepository, onOpenRepository }: {
@@ -111,7 +110,7 @@ function groupRepositories(entries: RankedContribution[], allIssues: OpenSourceO
       grouped.set(key, {
         key,
         primary: entry.item,
-        issues: allIssues.filter((item) => `${item.owner}/${item.repo}` === key && displayableStatuses.has(item.status)),
+        issues: allIssues.filter((item) => `${item.owner}/${item.repo}` === key && isDisplayableOpportunityStatus(item.status)),
         matchingIssueCount: entry.item.matchingIssueCount ?? 1,
         reason: entry.reason,
         rank: entry.rank,

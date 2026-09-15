@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, Bookmark, CheckCircle2, ExternalLink, LoaderCircle, ShieldAlert, X } from "lucide-react";
+import { isDisplayableOpportunityStatus } from "@/lib/open-source-tiers";
 import type { OpenSourceOpportunity, OpportunityPayload } from "@/lib/types";
 import { Avatar } from "./ui";
 
@@ -64,7 +65,7 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
       prefetchRepositoryOpportunities(owner, repo, tiersKey)
         .then((body) => {
           if (!active) return;
-          const fresh = body.records.filter((item): item is OpenSourceOpportunity => item.category === "open-source" && ["unassigned", "ask-first", "unknown"].includes(item.status));
+          const fresh = body.records.filter((item): item is OpenSourceOpportunity => item.category === "open-source" && isDisplayableOpportunityStatus(item.status));
           setItems(fresh);
           setState("ready");
         })

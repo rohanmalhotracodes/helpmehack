@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { BookOpenText, GitFork, Menu, Moon, Sun, X } from "lucide-react";
 import { useLocalList } from "@/hooks/use-local-list";
 import { useTheme } from "@/hooks/use-theme";
+import { isDisplayableOpportunityStatus } from "@/lib/open-source-tiers";
 import type { OpenSourceOpportunity, OpportunityPayload } from "@/lib/types";
 import { OpenSourceDirectory } from "./open-source-directory";
 import { OverlookedFeed } from "./overlooked-feed";
@@ -20,7 +21,7 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
   const saved = useLocalList("helpmehack:saved");
   const savedRepositories = useLocalList("helpmehack:saved-repositories");
   const records = useMemo(() => payload.records.filter((item): item is OpenSourceOpportunity => item.category === "open-source"), [payload.records]);
-  const activeItems = useMemo(() => records.filter((item) => `${item.owner}/${item.repo}` === activeRepository && ["unassigned", "ask-first", "unknown"].includes(item.status)), [activeRepository, records]);
+  const activeItems = useMemo(() => records.filter((item) => `${item.owner}/${item.repo}` === activeRepository && isDisplayableOpportunityStatus(item.status)), [activeRepository, records]);
   const closeRepository = useCallback(() => setActiveRepository(null), []);
 
   useEffect(() => {
