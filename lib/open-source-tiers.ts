@@ -15,7 +15,7 @@ export type OpenSourceTier = {
   items: RankedContribution[];
 };
 
-const startableStatuses = new Set(["unassigned", "ask-first", "unknown"]);
+const displayableStatuses = new Set(["unassigned", "ask-first", "possibly-claimed", "unknown"]);
 
 function factor(item: OpenSourceOpportunity, key: RepositoryQualityFactor["key"]) {
   const value = item.repositoryQuality?.factors.find((entry) => entry.key === key);
@@ -76,20 +76,17 @@ function impactReason(item: OpenSourceOpportunity) {
 }
 
 export function rankOpenSourceTiers(records: OpenSourceOpportunity[]): OpenSourceTier[] {
-  const active = records.filter((item) => startableStatuses.has(item.status));
+  const active = records.filter((item) => displayableStatuses.has(item.status));
   const buckets: Record<OpenSourceTierId, RankedContribution[]> = { beginner: [], moderate: [], "high-impact": [] };
 
   for (const item of active) {
     const value = scores(item);
     const hints = new Set(item.discoveryTiers ?? []);
     const beginnerLabel = item.experience === "Beginner" || item.labels.some((label) => /good first issue|beginner|first[-\s]timers?[-\s]only/i.test(label));
-    const credibleProject = value.stars >= 50 || factor(item, "newcomers") > 0 || (item.repositoryQuality?.score ?? 0) >= 45;
     const highImpact = hints.has("high-impact") && !beginnerLabel && value.stars >= 5_000 && factor(item, "reputation") >= 50 && factor(item, "maintenance") > 0 && (item.clarityReadiness ?? 35) >= 35;
-    const beginnerReady = !highImpact && beginnerLabel && credibleProject && (item.beginnerSuitability ?? 65) >= 60 && factor(item, "maintenance") > 0 && (factor(item, "onboarding") >= 30 || !item.repositoryQuality);
-    const moderateReady = !beginnerLabel && !highImpact && credibleProject && factor(item, "maintenance") > 0;
-    if (beginnerReady) buckets.beginner.push({ item, rank: value.beginner, reason: beginnerReason(item) });
-    if (moderateReady) buckets.moderate.push({ item, rank: value.moderate, reason: moderateReason(item) });
     if (highImpact) buckets["high-impact"].push({ item, rank: value.impact, reason: impactReason(item) });
+    else if (beginnerLabel || hints.has("beginner")) buckets.beginner.push({ item, rank: value.beginner, reason: beginnerReason(item) });
+    else buckets.moderate.push({ item, rank: value.moderate, reason: moderateReason(item) });
   }
 
   Object.values(buckets).forEach((items) => items.sort((a, b) => b.rank - a.rank || Date.parse(b.item.updatedAt) - Date.parse(a.item.updatedAt)));

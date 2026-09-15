@@ -28,12 +28,29 @@ describe("open-source tier ranking", () => {
       item("beginner"),
       item("moderate", { experience: "Intermediate", labels: ["help wanted"], beginnerSuitability: 45 }),
       item("impact", { experience: "Advanced", labels: ["help wanted"], discoveryTiers: ["high-impact"], repositoryQuality: quality(120_000, 19, 8) }),
-      item("claimed", { status: "possibly-claimed" }),
+      item("possibly-claimed", { experience: "Intermediate", labels: ["help wanted"], status: "possibly-claimed" }),
+      item("blocked", { status: "blocked" }),
     ]);
     expect(tiers.map((tier) => [tier.id, tier.items.map(({ item: entry }) => entry.id)])).toEqual([
       ["beginner", ["beginner"]],
-      ["moderate", ["moderate"]],
+      ["moderate", ["moderate", "possibly-claimed"]],
       ["high-impact", ["impact"]],
     ]);
+  });
+
+  it("places every displayable repository in exactly one section", () => {
+    const records = [
+      item("low-score-beginner", { beginnerSuitability: 20, clarityReadiness: 20 }),
+      item("impact-fallback", { experience: "Advanced", labels: ["help wanted"], discoveryTiers: ["high-impact"], repositoryQuality: quality(1_000, 5, 2) }),
+      item("uncategorized", { experience: "Intermediate", labels: ["contribution welcome"], repositoryQuality: undefined }),
+    ];
+
+    const tiers = rankOpenSourceTiers(records);
+    const displayed = tiers.flatMap((tier) => tier.items.map(({ item: entry }) => entry.id));
+
+    expect(displayed).toHaveLength(records.length);
+    expect(new Set(displayed).size).toBe(records.length);
+    expect(tiers.find((tier) => tier.id === "beginner")?.items[0].item.id).toBe("low-score-beginner");
+    expect(tiers.find((tier) => tier.id === "moderate")?.items.map(({ item: entry }) => entry.id)).toEqual(expect.arrayContaining(["impact-fallback", "uncategorized"]));
   });
 });

@@ -18,7 +18,7 @@ type RankedRepository = {
   rank: number;
 };
 
-const startableStatuses = new Set(["unassigned", "ask-first", "unknown"]);
+const displayableStatuses = new Set(["unassigned", "ask-first", "possibly-claimed", "unknown"]);
 type RepositorySort = "recommended" | "recent" | "adoption";
 
 export function OpenSourceDirectory({ records, savedRepositoryIds, savedIssueIds, onSaveRepository, onOpenRepository }: {
@@ -111,7 +111,7 @@ function groupRepositories(entries: RankedContribution[], allIssues: OpenSourceO
       grouped.set(key, {
         key,
         primary: entry.item,
-        issues: allIssues.filter((item) => `${item.owner}/${item.repo}` === key && startableStatuses.has(item.status)),
+        issues: allIssues.filter((item) => `${item.owner}/${item.repo}` === key && displayableStatuses.has(item.status)),
         matchingIssueCount: entry.item.matchingIssueCount ?? 1,
         reason: entry.reason,
         rank: entry.rank,
