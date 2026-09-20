@@ -55,8 +55,9 @@ export default function ContributePage() {
             </section>
           ))}
         </div>
-        <nav aria-label="Next step" className="x-border border-t pt-6">
+        <nav aria-label="Next step" className="x-border flex flex-wrap gap-x-6 border-t pt-6">
           <Link href="/open-source-projects" className="focus-ring inline-flex min-h-11 items-center gap-2 rounded text-sm font-semibold underline underline-offset-4">Find a project <ArrowRight size={16} aria-hidden="true" /></Link>
+        <Link href="/contribute/first-issue" className="focus-ring inline-flex min-h-11 items-center gap-2 rounded text-sm font-semibold underline underline-offset-4">Choose a good first issue <ArrowRight size={16} aria-hidden="true" /></Link>
         </nav>
       </main>
     </ContributionPageShell>
