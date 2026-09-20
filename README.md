@@ -47,7 +47,7 @@ Production can serve a durable repository snapshot from Upstash Redis instead of
 UPSTASH_REDIS_REST_URL=https://your-database.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your_rest_token
 OPPORTUNITY_INDEX_TARGET=500
-OPPORTUNITY_INDEX_BATCH_SIZE=20
+OPPORTUNITY_INDEX_BATCH_SIZE=24
 OPPORTUNITY_INDEX_CONCURRENCY=4
 ```
 
@@ -55,7 +55,7 @@ Redis credentials remain server-only. For Amplify Hosting, configure only the va
 
 For unattended indexing, set `REFRESH_SECRET` on the deployed site, then add `HELPMEHACK_URL` and the same `REFRESH_SECRET` as GitHub repository secrets. The included workflow calls the protected index worker at minute 17 of every hour and can also be run manually.
 
-The worker refreshes the discovery universe daily, targeting 500 repositories by default. It combines the reviewed catalog with active GitHub repositories carrying `good-first-issue`, `help-wanted`, or `hacktoberfest` topics. An automatically discovered project must still have at least 100 stars, 10 forks, six months of history, recent maintenance evidence, contribution documentation, and a genuinely open contribution-labelled issue. Each hourly run enriches the 20 least-recently checked repositories, retains successful older snapshots when a request fails, and removes a repository’s old card when a successful check finds no eligible issue. At the default settings, the first 500-repository pass completes in roughly 25 hourly runs. Visitor requests read the stored snapshot immediately; opening a card still performs a current, deeper issue check.
+The worker refreshes the discovery universe daily, targeting 500 repositories by default. It combines the reviewed catalog with active GitHub repositories carrying `good-first-issue`, `help-wanted`, or `hacktoberfest` topics. An automatically discovered project must still have at least 100 stars, 10 forks, six months of history, recent maintenance evidence, contribution documentation, and a genuinely open contribution-labelled issue. Each hourly run enriches at least 24 least-recently checked repositories, temporarily increasing to 30 while the live index has fewer than 60 available repositories, retains successful older snapshots when a request fails, and removes a repository’s old card when a successful check finds no eligible issue. At the default settings, the first 500-repository pass completes in roughly 25 hourly runs. Visitor requests read the stored snapshot immediately; opening a card still performs a current, deeper issue check.
 
 Without Redis credentials, the application retains its live GitHub fallback and an in-process cache, but that fallback is not durable across server instances or deployments.
 
@@ -71,7 +71,7 @@ Deploy from the AWS Amplify console:
 1. Choose **Create new app**.
 2. Connect GitHub.
 3. Select `rohanmalhotracodes/helpmehack`.
-4. Select the `aws-deployment` branch for the first deployment.
+4. Select the `aws-amplify` branch for the first deployment.
 5. Allow Amplify to create the required service role.
 6. Review the detected build settings and deploy.
 7. Add any required environment variables under the Amplify app settings, then redeploy.
@@ -100,7 +100,7 @@ An overall repository score is withheld unless all five factors have sufficient 
 
 Major ecosystem project signal is evidence about the codebase and the public verifiability of a contribution, not a hiring or resume-outcome promise. The main directory uses at most one issue per repository so a single busy project cannot consume the carousel. Opening a repository performs the deeper issue fetch.
 
-Discovery starts with a reviewed catalog of established projects split across beginner, experienced, and major-ecosystem search pools. A secondary discovery lane can admit an uncataloged organization project only when it is at least one year old and has at least 10,000 public stars, 500 forks, a contribution guide, current maintenance evidence, and a newcomer PR merged in the measured window; it must then pass the same availability checks as cataloged projects. With authenticated GitHub access, up to 36 distinct repository candidates are enriched per cycle. The feed checks repository metadata, documentation, current issue activity, recent merge history, and release activity. Expensive per-PR response sampling is normally deferred until a repository is opened, except for newly discovered projects where it is part of the admission gate. Opening a repository performs a deeper check of up to 12 labeled issues. Exact bot commands such as `@…bot claim` are surfaced only when found in checked source evidence. Rows may overlap when a repository has evidence for more than one tier.
+Discovery starts with a reviewed catalog of established projects split across beginner, experienced, and major-ecosystem search pools. A secondary discovery lane can admit an uncataloged organization project only when it is at least one year old and has at least 10,000 public stars, 500 forks, a contribution guide, current maintenance evidence, and a newcomer PR merged in the measured window; it must then pass the same availability checks as cataloged projects. With authenticated GitHub access, the live discovery pool can consider up to 84 distinct repository candidates per cycle before the same availability and quality filters are applied. The feed checks repository metadata, documentation, current issue activity, recent merge history, and release activity. Expensive per-PR response sampling is normally deferred until a repository is opened, except for newly discovered projects where it is part of the admission gate. Opening a repository performs a deeper check of up to 12 labeled issues. Exact bot commands such as `@…bot claim` are surfaced only when found in checked source evidence. Rows may overlap when a repository has evidence for more than one tier.
 
 ## Newsletter connection
 
