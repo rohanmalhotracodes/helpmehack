@@ -79,9 +79,13 @@ function SiteFooter({ onNavigate }: { onNavigate: (view: View) => void }) {
   return (
     <footer className="x-border mt-12 border-t" aria-label="Site footer">
       <div className="x-muted mx-auto flex max-w-[1240px] flex-col items-center gap-4 px-5 py-7 text-xs sm:flex-row sm:justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <Image src="/helpmehack-mark.png" width={24} height={24} alt="" className="logo-mark h-6 w-6 rounded-md" />
           <p>© 2026 HelpMeHack</p>
+          <a href="https://tin.computer" className={`${linkClass} inline-flex items-center gap-1.5`}>
+            <span aria-hidden="true" className="inline-block h-[1em] w-[1em] bg-[#66DC9D]" />
+            Growth by Tin
+          </a>
         </div>
         <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2" aria-label="Footer navigation">
           <button type="button" onClick={() => onNavigate("overlooked")} className={linkClass}>Overlooked</button>
