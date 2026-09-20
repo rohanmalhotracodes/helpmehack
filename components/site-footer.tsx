@@ -20,6 +20,7 @@ export function SiteFooter({ onNavigate }: { onNavigate?: (view: "overlooked" | 
           <Link href="/" onClick={onNavigate ? (event) => { event.preventDefault(); onNavigate("overlooked"); } : undefined} className={linkClass}>Overlooked</Link>
           <Link href="/#open-source" onClick={onNavigate ? (event) => { event.preventDefault(); onNavigate("open-source"); } : undefined} className={linkClass}>Open Source</Link>
           <Link href="/open-source-projects" className={linkClass}>Find a project</Link>
+          <Link href="/contribute" className={linkClass}>Ways to contribute</Link>
           <a href="https://opensource.guide/how-to-contribute/" target="_blank" rel="noreferrer" className={linkClass}>Contributor guide</a>
           <a href="https://docs.github.com/en/rest" target="_blank" rel="noreferrer" className={linkClass}>GitHub data</a>
           <a href="https://github.com/rohanmalhotracodes/helpmehack" target="_blank" rel="noreferrer" className={linkClass}>Source code</a>
