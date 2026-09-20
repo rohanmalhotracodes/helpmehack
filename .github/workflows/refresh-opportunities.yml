@@ -14,10 +14,23 @@ jobs:
     steps:
       - name: Refresh the deployed catalog
         if: ${{ env.HELPMEHACK_URL != '' && env.REFRESH_SECRET != '' }}
+        shell: bash
         run: |
+          set -euo pipefail
           test -n "$HELPMEHACK_URL"
           test -n "$REFRESH_SECRET"
-          curl --fail --show-error --silent \
-            --request POST \
-            --header "Authorization: Bearer $REFRESH_SECRET" \
-            "$HELPMEHACK_URL/api/cron/refresh-opportunities"
+
+          BASE_URL="${HELPMEHACK_URL%/}/api/cron/refresh-opportunities"
+
+          echo "Refreshing repository discovery universe..."
+          curl --fail --show-error --silent             --retry 2             --retry-all-errors             --retry-delay 2             --request POST             --header "Authorization: Bearer $REFRESH_SECRET"             "$BASE_URL?mode=discover"
+          echo
+
+          # Amplify SSR requests are intentionally kept small. Ten independent
+          # chunks refresh up to 30 repositories per scheduled run while each
+          # request only enriches three repositories.
+          for chunk in $(seq 1 10); do
+            echo "Refreshing repository chunk $chunk/10..."
+            curl --fail --show-error --silent               --retry 2               --retry-all-errors               --retry-delay 2               --request POST               --header "Authorization: Bearer $REFRESH_SECRET"               "$BASE_URL?limit=3"
+            echo
+          done
