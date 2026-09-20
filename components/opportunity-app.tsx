@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import { trackFunnel } from "@/lib/analytics";
 import { HomeLanding } from "./home-landing";
 import { SiteFooter } from "./site-footer";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BookOpenText, GitFork, Menu, Moon, Sun, X } from "lucide-react";
 import { useLocalList } from "@/hooks/use-local-list";
 import { useTheme } from "@/hooks/use-theme";
@@ -16,6 +17,12 @@ import { RepositoryPanel } from "./repository-panel";
 type View = "home" | "overlooked" | "open-source";
 export function OpportunityApp({ initialPayload }: { initialPayload: OpportunityPayload }) {
   const { theme, toggleTheme } = useTheme();
+  const lastReportedView = useRef<View | null>(null);
+  const reportView = useCallback((next: View) => {
+    if (lastReportedView.current === next) return;
+    lastReportedView.current = next;
+    trackFunnel("app_viewed", { view: next });
+  }, []);
   const [view, setView] = useState<View>("home");
   const [payload, setPayload] = useState(initialPayload);
   const [activeRepository, setActiveRepository] = useState<string | null>(null);
@@ -27,12 +34,16 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
   const closeRepository = useCallback(() => setActiveRepository(null), []);
 
   useEffect(() => {
-    const syncView = () => setView(window.location.hash === "#open-source" ? "open-source" : window.location.hash === "#feed" ? "overlooked" : "home");
+    const syncView = () => {
+      const next = window.location.hash === "#open-source" ? "open-source" : window.location.hash === "#feed" ? "overlooked" : "home";
+      setView(next);
+      reportView(next);
+    };
     syncView();
     window.addEventListener("hashchange", syncView);
     window.addEventListener("popstate", syncView);
     return () => { window.removeEventListener("hashchange", syncView); window.removeEventListener("popstate", syncView); };
-  }, []);
+  }, [reportView]);
 
   const refresh = useCallback(async () => {
     try {
@@ -54,6 +65,7 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
     setView(next);
     setMenuOpen(false);
     window.history.pushState(null, "", next === "open-source" ? "#open-source" : next === "overlooked" ? "#feed" : window.location.pathname);
+    reportView(next);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -64,7 +76,10 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
         ? <HomeLanding onNavigate={navigate} />
         : view === "overlooked"
         ? <OverlookedFeed onOpenSource={() => navigate("open-source")} />
-        : <OpenSourceDirectory records={records} savedRepositoryIds={savedRepositories.items} savedIssueIds={saved.items} onSaveRepository={savedRepositories.toggle} onOpenRepository={setActiveRepository} />}
+        : <OpenSourceDirectory records={records} savedRepositoryIds={savedRepositories.items} savedIssueIds={saved.items} onSaveRepository={savedRepositories.toggle} onOpenRepository={(repository) => {
+          setActiveRepository(repository);
+          trackFunnel("repository_opened", { repository });
+        }} />}
 
       <SiteFooter onNavigate={navigate} />
 
