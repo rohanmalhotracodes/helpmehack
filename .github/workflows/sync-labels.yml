@@ -1,0 +1,76 @@
+name: Sync repository labels
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/sync-labels.yml"
+
+permissions:
+  issues: write
+
+jobs:
+  sync-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = [
+              { name: "bug", color: "D73A4A", description: "Something is not working as intended" },
+              { name: "enhancement", color: "A2EEEF", description: "New feature or improvement" },
+              { name: "documentation", color: "0075CA", description: "Documentation changes or improvements" },
+              { name: "chore", color: "C5DEF5", description: "Maintenance, tooling, or housekeeping" },
+
+              { name: "priority: critical", color: "B60205", description: "Urgent issue requiring immediate attention" },
+              { name: "priority: high", color: "D93F0B", description: "High-priority work" },
+              { name: "priority: medium", color: "FBCA04", description: "Normal-priority work" },
+              { name: "priority: low", color: "0E8A16", description: "Useful but not urgent" },
+
+              { name: "needs triage", color: "EDEDED", description: "Needs initial maintainer assessment" },
+              { name: "needs maintainer review", color: "FBCA04", description: "External contribution awaiting maintainer triage or review" },
+              { name: "blocked", color: "B60205", description: "Cannot proceed until another dependency or decision is resolved" },
+              { name: "ready", color: "0E8A16", description: "Ready to be worked on or merged" },
+
+              { name: "good first issue", color: "7057FF", description: "Suitable for a first contribution" },
+              { name: "help wanted", color: "008672", description: "Maintainers welcome community help" },
+
+              { name: "area: frontend", color: "1D76DB", description: "UI, UX, React, or client-side work" },
+              { name: "area: backend", color: "5319E7", description: "Server-side logic or APIs" },
+              { name: "area: data", color: "006B75", description: "Repository discovery, ranking, refresh, or data processing" },
+              { name: "area: aws", color: "FF9900", description: "AWS infrastructure, deployment, or cloud configuration" },
+              { name: "area: seo", color: "C2E0C6", description: "SEO, metadata, indexing, or discoverability" },
+
+              { name: "duplicate", color: "CFD3D7", description: "This issue or pull request already exists" },
+              { name: "invalid", color: "E4E669", description: "Not actionable as currently reported" },
+              { name: "wontfix", color: "FFFFFF", description: "Not planned for implementation" }
+            ];
+
+            for (const label of labels) {
+              try {
+                const existing = await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                });
+
+                await github.rest.issues.updateLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                  new_name: label.name,
+                  color: label.color,
+                  description: label.description,
+                });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ...label,
+                });
+              }
+            }
