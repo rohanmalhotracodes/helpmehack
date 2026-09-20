@@ -18,6 +18,7 @@ export function ContributionPageShell({ children }: { children: React.ReactNode 
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/#feed" className="focus-ring x-muted inline-flex min-h-11 items-center rounded text-sm hover:text-[var(--text)]">Feed</Link>
+            <Link href="/#open-source" className="focus-ring x-muted inline-flex min-h-11 items-center rounded text-sm hover:text-[var(--text)]">Repos</Link>
             <button onClick={toggleTheme} className="focus-ring x-muted grid h-11 w-11 place-items-center rounded-full hover:bg-[var(--surface-raised)]" aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>
               {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             </button>
