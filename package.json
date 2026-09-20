@@ -21,6 +21,7 @@
     "@tailwindcss/postcss": "4.3.3",
     "lucide-react": "1.45.0",
     "next": "15.5.25",
+    "posthog-js": "1.434.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "tailwindcss": "4.3.3"
