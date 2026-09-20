@@ -1,6 +1,7 @@
 name: Feature request
 description: Suggest an improvement to HelpMeHack
 title: "[Feature]: "
+labels: ["enhancement", "needs triage"]
 body:
   - type: markdown
     attributes:
