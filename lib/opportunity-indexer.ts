@@ -82,7 +82,7 @@ export async function seedOpportunityIndex(payload: OpportunityPayload) {
 export async function refreshOpportunityIndex() {
   const startedAt = new Date().toISOString();
   const target = configuredNumber("OPPORTUNITY_INDEX_TARGET", 500, 100, 1_000);
-  const batchSize = configuredNumber("OPPORTUNITY_INDEX_BATCH_SIZE", 20, 1, 30);
+  const batchSize = configuredNumber("OPPORTUNITY_INDEX_BATCH_SIZE", 24, 1, 30);
   const concurrency = configuredNumber("OPPORTUNITY_INDEX_CONCURRENCY", 4, 1, 6);
   const state = await readOpportunityIndex().catch(() => null) ?? emptyState(startedAt);
   let discoveryError: string | undefined;
@@ -97,9 +97,11 @@ export async function refreshOpportunityIndex() {
     }
   }
 
+  const availableRepositories = new Set(state.records.map((record) => `${record.owner}/${record.repo}`.toLowerCase())).size;
+  const effectiveBatchSize = availableRepositories < 60 ? Math.max(batchSize, 30) : batchSize;
   const selected = [...state.repositories]
     .sort((a, b) => Date.parse(a.indexedAt ?? "1970-01-01") - Date.parse(b.indexedAt ?? "1970-01-01"))
-    .slice(0, batchSize);
+    .slice(0, effectiveBatchSize);
   let refreshed = 0;
   let failed = 0;
 
