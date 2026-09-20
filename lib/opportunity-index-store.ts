@@ -130,7 +130,7 @@ export async function readOpportunityIndex(): Promise<OpportunityIndexState | nu
   const state: OpportunityIndexState = {
     version: 1,
     records: items
-      .filter((item) => typeof item.sk === "string" && item.sk.startsWith("RECORD#") && item.payload)
+      .filter((item) => typeof item.sk === "string" && item.sk.toLowerCase().startsWith("record#") && item.payload)
       .map((item) => item.payload as OpenSourceOpportunity),
     repositories: items
       .filter((item) => typeof item.sk === "string" && item.sk.startsWith("REPO#") && item.payload)
