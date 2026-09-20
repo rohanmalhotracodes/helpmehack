@@ -17,8 +17,8 @@ export function SiteFooter({ onNavigate }: { onNavigate?: (view: "overlooked" | 
           </a>
         </div>
         <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2" aria-label="Footer navigation">
-          <Link href="/" onClick={onNavigate ? (event) => { event.preventDefault(); onNavigate("overlooked"); } : undefined} className={linkClass}>Overlooked</Link>
-          <Link href="/#open-source" onClick={onNavigate ? (event) => { event.preventDefault(); onNavigate("open-source"); } : undefined} className={linkClass}>Open Source</Link>
+          <Link href="/#feed" onClick={onNavigate ? (event) => { event.preventDefault(); onNavigate("overlooked"); } : undefined} className={linkClass}>Feed</Link>
+          <Link href="/#open-source" onClick={onNavigate ? (event) => { event.preventDefault(); onNavigate("open-source"); } : undefined} className={linkClass}>Repos</Link>
           <Link href="/open-source-projects" className={linkClass}>Find a project</Link>
           <Link href="/contribute" className={linkClass}>Ways to contribute</Link>
           <a href="https://opensource.guide/how-to-contribute/" target="_blank" rel="noreferrer" className={linkClass}>Contributor guide</a>

@@ -1,15 +1,15 @@
 const questions = [
   {
     question: "What is HelpMeHack?",
-    answer: "HelpMeHack helps you find open-source projects to contribute to. It combines the Overlooked editorial feed with a directory of repositories and open issues.",
+    answer: "HelpMeHack helps you find open-source projects and issues you can contribute to. Its Overlooked feed shares practical advice for contributors.",
   },
   {
     question: "Who is it for?",
-    answer: "It's for beginners choosing their first contribution and experienced developers looking for projects. You can browse without an account.",
+    answer: "HelpMeHack is for beginners making their first contribution and experienced developers looking for new projects. You can browse without an account.",
   },
   {
     question: "How do I get started?",
-    answer: "Open the Open Source tab and choose a repository. Read its contribution guide and issue details, then follow the project's instructions on GitHub.",
+    answer: "Select Repos and choose a repository. Read its contribution guide and issue details, then follow the project's instructions on GitHub.",
   },
 ];
 
