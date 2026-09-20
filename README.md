@@ -41,7 +41,7 @@ All credentials are read only in server code. Current issue evidence is cached f
 
 ## Persistent repository index
 
-Production can serve a durable repository snapshot from Upstash Redis instead of rebuilding the feed during a visitor request. Create an Upstash Redis integration in the Vercel Marketplace and configure:
+Production can serve a durable repository snapshot from Upstash Redis instead of rebuilding the feed during a visitor request. Create an Upstash Redis database directly and configure its provider-neutral REST credentials:
 
 ```bash
 UPSTASH_REDIS_REST_URL=https://your-database.upstash.io
@@ -51,13 +51,29 @@ OPPORTUNITY_INDEX_BATCH_SIZE=20
 OPPORTUNITY_INDEX_CONCURRENCY=4
 ```
 
-The older `KV_REST_API_URL` and `KV_REST_API_TOKEN` aliases are also supported. If Vercel connects the resource with an `UPSTASH_REDIS_REST` custom prefix, the generated `UPSTASH_REDIS_REST_KV_REST_API_URL` and `UPSTASH_REDIS_REST_KV_REST_API_TOKEN` names work as well. Redis credentials remain server-only.
+Redis credentials remain server-only. On AWS, store the token in AWS Secrets Manager and inject it into the ECS task.
 
 For unattended indexing, set `REFRESH_SECRET` on the deployed site, then add `HELPMEHACK_URL` and the same `REFRESH_SECRET` as GitHub repository secrets. The included workflow calls the protected index worker at minute 17 of every hour and can also be run manually.
 
 The worker refreshes the discovery universe daily, targeting 500 repositories by default. It combines the reviewed catalog with active GitHub repositories carrying `good-first-issue`, `help-wanted`, or `hacktoberfest` topics. An automatically discovered project must still have at least 100 stars, 10 forks, six months of history, recent maintenance evidence, contribution documentation, and a genuinely open contribution-labelled issue. Each hourly run enriches the 20 least-recently checked repositories, retains successful older snapshots when a request fails, and removes a repository’s old card when a successful check finds no eligible issue. At the default settings, the first 500-repository pass completes in roughly 25 hourly runs. Visitor requests read the stored snapshot immediately; opening a card still performs a current, deeper issue check.
 
 Without Redis credentials, the application retains its live GitHub fallback and an in-process cache, but that fallback is not durable across server instances or deployments.
+
+
+## AWS deployment
+
+HelpMeHack is prepared for container deployment on AWS ECS/Fargate. The production build uses Next.js standalone output and includes a health endpoint at `/api/health`.
+
+Build and test the production container locally:
+
+```bash
+docker build -t helpmehack .
+docker run --rm -p 3000:3000 --env-file .env helpmehack
+```
+
+For the one-time AWS setup, ECR push commands, ECS configuration, Secrets Manager mapping, and automatic GitHub Actions deployment, see [AWS_DEPLOYMENT.md](AWS_DEPLOYMENT.md).
+
+The included `.github/workflows/deploy-aws.yml` workflow builds the image, pushes it to Amazon ECR, and forces a new ECS deployment after changes land on `main`.
 
 ## Open-source tiers
 
