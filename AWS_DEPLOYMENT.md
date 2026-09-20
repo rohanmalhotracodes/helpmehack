@@ -29,7 +29,7 @@ Amplify should classify the application as a Next.js SSR / WEB_COMPUTE applicati
 
 ## Optional environment variables
 
-The application can start without credentials using its public GitHub fallback, but production indexing benefits from authenticated GitHub access and persistent Redis.
+The application can start without credentials using its public GitHub fallback, but production indexing benefits from authenticated GitHub access and the persistent DynamoDB index.
 
 Configure only the values you use:
 
@@ -40,8 +40,8 @@ GITHUB_APP_PRIVATE_KEY_BASE64
 GITHUB_TOKEN
 GITHUB_DISCOVERY_TOKEN
 
-UPSTASH_REDIS_REST_URL
-UPSTASH_REDIS_REST_TOKEN
+HELPMEHACK_DYNAMODB_TABLE=helpmehack-opportunity-index
+HELPMEHACK_DYNAMODB_REGION=ap-south-1
 
 OPPORTUNITY_INDEX_TARGET=500
 OPPORTUNITY_INDEX_BATCH_SIZE=24
@@ -77,7 +77,7 @@ once per hour.
 
 ## Logs
 
-For an SSR deployment, Amplify sends server runtime logs to Amazon CloudWatch. Use those logs to investigate GitHub API, Redis, newsletter, or route-handler errors.
+For an SSR deployment, Amplify sends server runtime logs to Amazon CloudWatch. Use those logs to investigate GitHub API, DynamoDB, newsletter, or route-handler errors.
 
 ## Custom domain
 
@@ -89,3 +89,42 @@ After the default Amplify URL works:
 4. Follow the DNS validation instructions.
 
 Amplify provisions HTTPS for the connected domain.
+
+
+## DynamoDB table
+
+Create an on-demand DynamoDB table:
+
+```text
+Table name: helpmehack-opportunity-index
+Partition key: pk (String)
+Sort key: sk (String)
+```
+
+The index stores one metadata item, repository-state items, and current opportunity records under the same partition. This avoids the DynamoDB 400 KB item limit as the discovery universe grows.
+
+## Amplify SSR compute role
+
+Create or attach an Amplify SSR compute role with access only to the HelpMeHack table. The runtime needs:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:Query",
+        "dynamodb:BatchWriteItem"
+      ],
+      "Resource": "arn:aws:dynamodb:REGION:ACCOUNT_ID:table/helpmehack-opportunity-index"
+    }
+  ]
+}
+```
+
+Do not add `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` to Amplify.
+
+## Scheduling
+
+Scheduling stays in GitHub Actions. No EventBridge or Lambda is required. The existing hourly workflow posts to `/api/cron/refresh-opportunities`, and the Amplify SSR route updates DynamoDB.
