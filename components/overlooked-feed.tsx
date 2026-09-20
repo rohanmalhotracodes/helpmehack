@@ -1,8 +1,19 @@
 import Image from "next/image";
-import { ArrowUpRight, BadgeCheck, BookOpen, GitPullRequest, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, BadgeCheck, BookOpen, CalendarDays, GitPullRequest, ShieldCheck } from "lucide-react";
 import { NewsletterSignup } from "./newsletter-signup";
 
 const posts = [
+  {
+    id: "hacktoberfest-2026",
+    eyebrow: "Hacktoberfest 2026",
+    title: "Hacktoberfest is coming up this October.",
+    body: "Hacktoberfest returns in October as a month-long celebration of open source. The 2026 edition includes 300+ online and in-person events and a focus on open-source AI. HelpMeHack will keep surfacing contribution-ready repositories as participating projects become active.",
+    source: "Official Hacktoberfest 2026",
+    href: "https://hacktoberfest.com/",
+    icon: CalendarDays,
+    imageUrl: "https://github.com/hacktoberfest.png",
+    imageAlt: "Hacktoberfest official logo",
+  },
   {
     id: "linked-work",
     eyebrow: "Before you claim an issue",
@@ -11,6 +22,8 @@ const posts = [
     source: "How GitHub links pull requests to issues",
     href: "https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue",
     icon: GitPullRequest,
+    imageUrl: undefined,
+    imageAlt: undefined,
   },
   {
     id: "contribution-rules",
@@ -20,6 +33,8 @@ const posts = [
     source: "GitHub’s open-source contribution guide",
     href: "https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-open-source",
     icon: BookOpen,
+    imageUrl: undefined,
+    imageAlt: undefined,
   },
   {
     id: "merge-evidence",
@@ -29,6 +44,8 @@ const posts = [
     source: "Open-source contribution best practices",
     href: "https://opensource.guide/how-to-contribute/",
     icon: ShieldCheck,
+    imageUrl: undefined,
+    imageAlt: undefined,
   },
 ];
 
@@ -51,6 +68,7 @@ export function OverlookedFeed({ onOpenSource }: { onOpenSource: () => void }) {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-1.5 text-sm"><strong className="x-text">helpmehack</strong><BadgeCheck size={15} aria-label="Administrator" className="text-[#1d9bf0]" /><span className="x-muted">@helpmehack · Admin</span></div>
                       <p className="x-muted mt-3 flex items-center gap-1.5 text-xs font-medium uppercase tracking-[.1em]"><Icon size={13} aria-hidden="true" />{post.eyebrow}</p>
+                      {post.imageUrl && <img src={post.imageUrl} alt={post.imageAlt ?? ""} className="x-border mt-4 h-16 w-16 rounded-2xl border object-cover" />}
                       <h2 className="x-text mt-2 text-[17px] font-bold leading-6">{post.title}</h2>
                       <p className="x-text mt-2 text-[15px] leading-6">{post.body}</p>
                       <a href={post.href} target="_blank" rel="noreferrer" className="focus-ring x-muted mt-4 inline-flex items-center gap-1.5 rounded text-xs font-medium hover:underline">{post.source}<ArrowUpRight size={13} /></a>
