@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { ArrowUpRight, BadgeCheck, BookOpen, CalendarDays, GitPullRequest, ShieldCheck } from "lucide-react";
 import { NewsletterSignup } from "./newsletter-signup";
-import { HomepageFaq } from "./homepage-faq";
 
 const posts = [
   {
@@ -94,7 +93,6 @@ export function OverlookedFeed({ onOpenSource }: { onOpenSource: () => void }) {
         </aside>
       </div>
       <NewsletterSignup />
-      <HomepageFaq />
     </main>
   );
 }
