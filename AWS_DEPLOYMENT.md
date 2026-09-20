@@ -1,161 +1,91 @@
-# Deploy HelpMeHack on AWS
+# Deploy HelpMeHack on AWS Amplify
 
-HelpMeHack is a full-stack Next.js application. Its frontend and `/api/*` route handlers run together, so the AWS deployment target is a container on Amazon ECS/Fargate rather than static S3 hosting.
+HelpMeHack is a full-stack Next.js SSR application and is configured to deploy directly from GitHub with AWS Amplify Hosting.
 
-## Architecture
+## What the repository already contains
 
-- Amazon ECR stores the production Docker image.
-- Amazon ECS on AWS Fargate runs the Next.js server.
-- An Application Load Balancer or ECS Express Mode exposes HTTPS traffic.
-- AWS Secrets Manager stores private server credentials.
-- Amazon CloudWatch receives ECS application logs.
-- Upstash Redis remains the durable opportunity-index store through its provider-neutral REST API.
-- GitHub Actions keeps the hourly opportunity refresh and can deploy new images to ECS.
+- Next.js 15.5.25
+- Node.js 22 via `.nvmrc`
+- `next build` for SSR
+- `amplify.yml` with `.next` as the deployment artifact
+- server-side API routes under `app/api/*`
+- hourly GitHub Actions refresh workflow
 
-## 1. Prerequisites
+No Docker, ECR, ECS, EC2, or Application Load Balancer is required.
 
-Install Docker and the AWS CLI, then authenticate the CLI:
+## Deploy
 
-```bash
-aws configure
-aws sts get-caller-identity
-```
+1. Open **AWS Amplify**.
+2. Choose **Create new app**.
+3. Choose **GitHub** as the repository provider.
+4. Authorize AWS Amplify if prompted.
+5. Select `rohanmalhotracodes/helpmehack`.
+6. Select branch `aws-deployment`.
+7. On the app settings page, let Amplify create and use a new service role.
+8. Confirm the build settings are loaded from `amplify.yml`.
+9. Choose **Save and deploy**.
 
-Use one AWS region for ECR and ECS:
+Amplify should classify the application as a Next.js SSR / WEB_COMPUTE application.
 
-```bash
-export AWS_REGION=ap-south-1
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export ECR_REPOSITORY=helpmehack
-```
+## Optional environment variables
 
-## 2. Build locally
+The application can start without credentials using its public GitHub fallback, but production indexing benefits from authenticated GitHub access and persistent Redis.
 
-Create a local `.env` from `.env.example`.
-
-```bash
-npm ci
-npm run lint
-npm run typecheck
-npm test
-npm run build
-
-docker build -t helpmehack .
-docker run --rm -p 3000:3000 --env-file .env helpmehack
-```
-
-Verify:
-
-```bash
-curl -f http://localhost:3000/api/health
-```
-
-## 3. Create ECR and push the first image
-
-```bash
-aws ecr create-repository \
-  --repository-name "$ECR_REPOSITORY" \
-  --region "$AWS_REGION"
-
-aws ecr get-login-password --region "$AWS_REGION" | \
-docker login \
-  --username AWS \
-  --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
-
-docker buildx build \
-  --platform linux/amd64 \
-  -t "$ECR_REPOSITORY:latest" \
-  --load .
-
-docker tag "$ECR_REPOSITORY:latest" \
-  "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest"
-
-docker push \
-  "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest"
-```
-
-## 4. Store production secrets
-
-Use AWS Secrets Manager for:
-
-- `GITHUB_APP_PRIVATE_KEY_BASE64`
-- `GITHUB_TOKEN` if used
-- `GITHUB_DISCOVERY_TOKEN` if used
-- `UPSTASH_REDIS_REST_TOKEN`
-- `REFRESH_SECRET`
-- `NEWSLETTER_API_TOKEN` if used
-
-These can be normal ECS environment variables:
-
-- `GITHUB_APP_ID`
-- `GITHUB_APP_INSTALLATION_ID`
-- `UPSTASH_REDIS_REST_URL`
-- `OPPORTUNITY_INDEX_TARGET`
-- `OPPORTUNITY_INDEX_BATCH_SIZE`
-- `OPPORTUNITY_INDEX_CONCURRENCY`
-- `OPPORTUNITY_INDEX_KEY`
-- `NEWSLETTER_ENDPOINT`
-
-Do not bake secrets into the Docker image or commit them to Git.
-
-## 5. Create the ECS/Fargate service
-
-Use ECS Express Mode if it is available in your account, or create a standard ECS/Fargate service behind an Application Load Balancer.
-
-Configure:
-
-- container port: `3000`
-- health check path: `/api/health`
-- desired tasks: `1` initially
-- image: `$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/helpmehack:latest`
-- CloudWatch logging: enabled
-- HTTPS endpoint: enabled
-
-Inject the environment variables and Secrets Manager values from the previous section into the task.
-
-## 6. Hourly opportunity refresh
-
-The existing `.github/workflows/refresh-opportunities.yml` workflow remains platform-independent.
-
-After AWS is live, set these GitHub repository secrets:
+Configure only the values you use:
 
 ```text
-HELPMEHACK_URL=https://your-aws-hostname
-REFRESH_SECRET=the-same-value-used-by-the-ecs-task
+GITHUB_APP_ID
+GITHUB_APP_INSTALLATION_ID
+GITHUB_APP_PRIVATE_KEY_BASE64
+GITHUB_TOKEN
+GITHUB_DISCOVERY_TOKEN
+
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
+
+OPPORTUNITY_INDEX_TARGET=500
+OPPORTUNITY_INDEX_BATCH_SIZE=20
+OPPORTUNITY_INDEX_CONCURRENCY=4
+OPPORTUNITY_INDEX_KEY=helpmehack:opportunity-index:v1
+
+REFRESH_SECRET
+
+NEWSLETTER_ENDPOINT
+NEWSLETTER_API_TOKEN
 ```
 
-## 7. Automatic deployments
+After changing environment variables, redeploy the branch.
 
-The included `.github/workflows/deploy-aws.yml` workflow builds and pushes a Docker image and forces a new ECS deployment after each push to `main`.
+AWS documents that Next.js SSR runtime variables need to be written to a Next.js environment file during the Amplify build. The repository's `amplify.yml` does this for the variables above.
 
-Configure GitHub repository variables:
+## Scheduled refresh
+
+Once Amplify provides the live URL, add these GitHub Actions repository secrets:
 
 ```text
-AWS_REGION=ap-south-1
-ECR_REPOSITORY=helpmehack
-ECS_CLUSTER=your-cluster-name
-ECS_SERVICE=your-service-name
+HELPMEHACK_URL=https://YOUR-BRANCH.YOUR-APP-ID.amplifyapp.com
+REFRESH_SECRET=the-same-value-configured-in-Amplify
 ```
 
-Configure this GitHub repository secret:
+The existing `refresh-opportunities.yml` workflow will continue calling:
 
 ```text
-AWS_ROLE_ARN=arn:aws:iam::<account-id>:role/<github-actions-role>
+POST /api/cron/refresh-opportunities
 ```
 
-Use GitHub Actions OIDC for the IAM role. Grant it only the ECR push permissions for this repository and the ECS permissions required to describe and update this service.
+once per hour.
 
-The ECS task definition should reference the ECR image using the `:latest` tag. The workflow also publishes an immutable commit-SHA tag for traceability.
+## Logs
 
-## 8. Domain
+For an SSR deployment, Amplify sends server runtime logs to Amazon CloudWatch. Use those logs to investigate GitHub API, Redis, newsletter, or route-handler errors.
 
-After the AWS endpoint is verified, point your domain to the AWS load balancer/Express Mode endpoint and use AWS Certificate Manager for HTTPS.
+## Custom domain
 
-## Production smoke tests
+After the default Amplify URL works:
 
-```bash
-curl -f https://YOUR_AWS_HOST/api/health
-curl -f https://YOUR_AWS_HOST/api/opportunities
-```
+1. Open the HelpMeHack app in Amplify.
+2. Go to **Hosting > Custom domains**.
+3. Add your domain.
+4. Follow the DNS validation instructions.
 
-Then manually trigger the `Refresh open-source opportunities` workflow once and confirm it succeeds.
+Amplify provisions HTTPS for the connected domain.
