@@ -51,7 +51,7 @@ OPPORTUNITY_INDEX_BATCH_SIZE=20
 OPPORTUNITY_INDEX_CONCURRENCY=4
 ```
 
-Redis credentials remain server-only. On AWS, store the token in AWS Secrets Manager and inject it into the ECS task.
+Redis credentials remain server-only. For Amplify Hosting, configure only the variables you need in the Amplify app settings.
 
 For unattended indexing, set `REFRESH_SECRET` on the deployed site, then add `HELPMEHACK_URL` and the same `REFRESH_SECRET` as GitHub repository secrets. The included workflow calls the protected index worker at minute 17 of every hour and can also be run manually.
 
@@ -62,18 +62,25 @@ Without Redis credentials, the application retains its live GitHub fallback and 
 
 ## AWS deployment
 
-HelpMeHack is prepared for container deployment on AWS ECS/Fargate. The production build uses Next.js standalone output and includes a health endpoint at `/api/health`.
+HelpMeHack is configured for **AWS Amplify Hosting** as a full-stack Next.js SSR application.
 
-Build and test the production container locally:
+The repository pins **Next.js 15.5.25** and **Node.js 22**, both supported by Amplify Hosting. The included `amplify.yml` installs dependencies, exposes configured server variables to the Next.js runtime, and builds the `.next` SSR output.
 
-```bash
-docker build -t helpmehack .
-docker run --rm -p 3000:3000 --env-file .env helpmehack
-```
+Deploy from the AWS Amplify console:
 
-For the one-time AWS setup, ECR push commands, ECS configuration, Secrets Manager mapping, and automatic GitHub Actions deployment, see [AWS_DEPLOYMENT.md](AWS_DEPLOYMENT.md).
+1. Choose **Create new app**.
+2. Connect GitHub.
+3. Select `rohanmalhotracodes/helpmehack`.
+4. Select the `aws-deployment` branch for the first deployment.
+5. Allow Amplify to create the required service role.
+6. Review the detected build settings and deploy.
+7. Add any required environment variables under the Amplify app settings, then redeploy.
 
-The included `.github/workflows/deploy-aws.yml` workflow builds the image, pushes it to Amazon ECR, and forces a new ECS deployment after changes land on `main`.
+Amplify automatically deploys new commits from the connected branch and sends SSR runtime logs to Amazon CloudWatch.
+
+The existing `.github/workflows/refresh-opportunities.yml` workflow remains responsible for the hourly opportunity-index refresh. After deployment, set its `HELPMEHACK_URL` repository secret to the Amplify URL and keep `REFRESH_SECRET` synchronized.
+
+> Note: Amplify's documented SSR environment-variable mechanism writes selected variables into `.env.production` during the build. Do not grant untrusted users access to deployment artifacts, and keep the number of configured secrets to the minimum required.
 
 ## Open-source tiers
 
