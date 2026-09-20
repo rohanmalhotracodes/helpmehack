@@ -1,3 +1,5 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { BatchWriteCommand, DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import type { OpenSourceOpportunity, OpportunityPayload } from "./types";
 
 export type IndexedRepository = {
@@ -17,34 +19,46 @@ export type OpportunityIndexState = {
 };
 
 const defaultKey = "helpmehack:opportunity-index:v1";
+const metaSortKey = "META";
 let memoryState: OpportunityIndexState | null = null;
+let documentClient: DynamoDBDocumentClient | null = null;
 
-function redisConfiguration() {
-  const url = process.env.UPSTASH_REDIS_REST_URL
-    ?? process.env.KV_REST_API_URL
-    ?? process.env.UPSTASH_REDIS_REST_KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
-    ?? process.env.KV_REST_API_TOKEN
-    ?? process.env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN;
-  return url && token ? { url: url.replace(/\/$/, ""), token } : null;
+function dynamoConfiguration() {
+  const tableName = process.env.HELPMEHACK_DYNAMODB_TABLE?.trim();
+  const region = process.env.HELPMEHACK_DYNAMODB_REGION?.trim();
+  return tableName ? { tableName, region: region || undefined } : null;
 }
 
 function indexKey() {
   return process.env.OPPORTUNITY_INDEX_KEY?.trim() || defaultKey;
 }
 
-async function redisCommand<T>(command: Array<string | number>): Promise<T> {
-  const config = redisConfiguration();
+function partitionKey() {
+  return `INDEX#${indexKey()}`;
+}
+
+function repositoryKey(fullName: string) {
+  return `REPO#${fullName.toLowerCase()}`;
+}
+
+function recordKey(record: OpenSourceOpportunity) {
+  return `RECORD#${record.owner}/${record.repo}`.toLowerCase();
+}
+
+function cloneState(state: OpportunityIndexState) {
+  return JSON.parse(JSON.stringify(state)) as OpportunityIndexState;
+}
+
+function client() {
+  const config = dynamoConfiguration();
   if (!config) throw new Error("Persistent opportunity index is not configured.");
-  const response = await fetch(config.url, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" },
-    body: JSON.stringify(command),
-    cache: "no-store",
-  });
-  const body = await response.json() as { result?: T; error?: string };
-  if (!response.ok || body.error) throw new Error(body.error ?? `Persistent index returned ${response.status}.`);
-  return body.result as T;
+  if (!documentClient) {
+    const base = new DynamoDBClient(config.region ? { region: config.region } : {});
+    documentClient = DynamoDBDocumentClient.from(base, {
+      marshallOptions: { removeUndefinedValues: true },
+    });
+  }
+  return documentClient;
 }
 
 function isIndexState(value: unknown): value is OpportunityIndexState {
@@ -53,27 +67,131 @@ function isIndexState(value: unknown): value is OpportunityIndexState {
   return state.version === 1 && Array.isArray(state.records) && Array.isArray(state.repositories) && typeof state.updatedAt === "string";
 }
 
+function recordMap(records: OpenSourceOpportunity[]) {
+  return new Map(records.map((record) => [`${record.owner}/${record.repo}`.toLowerCase(), record]));
+}
+
+function repositoryMap(repositories: IndexedRepository[]) {
+  return new Map(repositories.map((repository) => [repository.fullName.toLowerCase(), repository]));
+}
+
+function changed(left: unknown, right: unknown) {
+  return JSON.stringify(left) !== JSON.stringify(right);
+}
+
+async function batchWrite(requests: Array<Record<string, unknown>>) {
+  const config = dynamoConfiguration();
+  if (!config || !requests.length) return;
+  let pending = requests;
+
+  for (let attempt = 0; pending.length && attempt < 6; attempt += 1) {
+    const next: Array<Record<string, unknown>> = [];
+    for (let offset = 0; offset < pending.length; offset += 25) {
+      const chunk = pending.slice(offset, offset + 25);
+      const response = await client().send(new BatchWriteCommand({
+        RequestItems: { [config.tableName]: chunk },
+      }));
+      next.push(...(response.UnprocessedItems?.[config.tableName] ?? []));
+    }
+    pending = next;
+    if (pending.length) await new Promise((resolve) => setTimeout(resolve, 75 * (attempt + 1)));
+  }
+
+  if (pending.length) throw new Error(`DynamoDB left ${pending.length} opportunity-index writes unprocessed.`);
+}
+
 export function isPersistentOpportunityIndexConfigured() {
-  return Boolean(redisConfiguration());
+  return Boolean(dynamoConfiguration());
 }
 
 export async function readOpportunityIndex(): Promise<OpportunityIndexState | null> {
-  const config = redisConfiguration();
+  const config = dynamoConfiguration();
   if (!config) return memoryState;
-  const serialized = await redisCommand<string | null>(["GET", indexKey()]);
-  if (!serialized) return null;
-  try {
-    const parsed = JSON.parse(serialized) as unknown;
-    return isIndexState(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
+
+  const items: Array<Record<string, unknown>> = [];
+  let exclusiveStartKey: Record<string, unknown> | undefined;
+
+  do {
+    const response = await client().send(new QueryCommand({
+      TableName: config.tableName,
+      KeyConditionExpression: "#pk = :pk",
+      ExpressionAttributeNames: { "#pk": "pk" },
+      ExpressionAttributeValues: { ":pk": partitionKey() },
+      ConsistentRead: true,
+      ExclusiveStartKey: exclusiveStartKey,
+    }));
+    items.push(...((response.Items ?? []) as Array<Record<string, unknown>>));
+    exclusiveStartKey = response.LastEvaluatedKey as Record<string, unknown> | undefined;
+  } while (exclusiveStartKey);
+
+  const meta = items.find((item) => item.sk === metaSortKey);
+  if (!meta) return null;
+
+  const state: OpportunityIndexState = {
+    version: 1,
+    records: items
+      .filter((item) => typeof item.sk === "string" && item.sk.startsWith("RECORD#") && item.payload)
+      .map((item) => item.payload as OpenSourceOpportunity),
+    repositories: items
+      .filter((item) => typeof item.sk === "string" && item.sk.startsWith("REPO#") && item.payload)
+      .map((item) => item.payload as IndexedRepository),
+    createdAt: String(meta.createdAt ?? ""),
+    updatedAt: String(meta.updatedAt ?? ""),
+    lastDiscoveryAt: typeof meta.lastDiscoveryAt === "string" ? meta.lastDiscoveryAt : undefined,
+  };
+
+  if (!isIndexState(state)) return null;
+  memoryState = cloneState(state);
+  return state;
 }
 
 export async function writeOpportunityIndex(state: OpportunityIndexState) {
-  memoryState = state;
-  if (!redisConfiguration()) return false;
-  await redisCommand<string>(["SET", indexKey(), JSON.stringify(state)]);
+  const config = dynamoConfiguration();
+  const previous = memoryState ? cloneState(memoryState) : null;
+  memoryState = cloneState(state);
+  if (!config) return false;
+
+  const pk = partitionKey();
+  const requests: Array<Record<string, unknown>> = [{
+    PutRequest: {
+      Item: {
+        pk,
+        sk: metaSortKey,
+        version: state.version,
+        createdAt: state.createdAt,
+        updatedAt: state.updatedAt,
+        lastDiscoveryAt: state.lastDiscoveryAt,
+      },
+    },
+  }];
+
+  const previousRepositories = repositoryMap(previous?.repositories ?? []);
+  const nextRepositories = repositoryMap(state.repositories);
+  for (const [key, repository] of nextRepositories) {
+    if (!previousRepositories.has(key) || changed(previousRepositories.get(key), repository)) {
+      requests.push({ PutRequest: { Item: { pk, sk: repositoryKey(repository.fullName), payload: repository } } });
+    }
+  }
+  for (const [key, repository] of previousRepositories) {
+    if (!nextRepositories.has(key)) {
+      requests.push({ DeleteRequest: { Key: { pk, sk: repositoryKey(repository.fullName) } } });
+    }
+  }
+
+  const previousRecords = recordMap(previous?.records ?? []);
+  const nextRecords = recordMap(state.records);
+  for (const [key, record] of nextRecords) {
+    if (!previousRecords.has(key) || changed(previousRecords.get(key), record)) {
+      requests.push({ PutRequest: { Item: { pk, sk: recordKey(record), payload: record } } });
+    }
+  }
+  for (const [key, record] of previousRecords) {
+    if (!nextRecords.has(key)) {
+      requests.push({ DeleteRequest: { Key: { pk, sk: recordKey(record) } } });
+    }
+  }
+
+  await batchWrite(requests);
   return true;
 }
 
@@ -83,7 +201,7 @@ export function opportunityPayloadFromIndex(state: OpportunityIndexState): Oppor
     records: state.records,
     checkedAt: state.updatedAt,
     mode: "live",
-    providerLabel: "Persistent GitHub opportunity index",
+    providerLabel: "Persistent GitHub opportunity index · Amazon DynamoDB",
     refreshIntervalMs: 15 * 60_000,
     warning: age > 6 * 60 * 60_000 ? "The repository index is stale because its scheduled refresh has not completed recently." : undefined,
   };
