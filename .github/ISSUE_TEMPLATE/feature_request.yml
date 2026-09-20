@@ -1,0 +1,67 @@
+name: Feature request
+description: Suggest an improvement to HelpMeHack
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Good feature requests start with the user problem. Please explain the need before proposing implementation details.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Who has this problem, and what is difficult today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What would a good solution look like?
+      description: Describe the desired user outcome rather than only the implementation.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Home
+        - Feed
+        - Repos
+        - Repository ranking
+        - Issue availability detection
+        - Search / filtering
+        - Contributor guidance
+        - Data / integrations
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workarounds or other approaches have you considered?
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add screenshots, examples, links, or references if helpful.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I am describing a user problem, not only requesting a specific technology or implementation.
+          required: true
