@@ -79,26 +79,49 @@ export async function seedOpportunityIndex(payload: OpportunityPayload) {
   return writeOpportunityIndex(state);
 }
 
-export async function refreshOpportunityIndex() {
+export async function refreshOpportunityIndex(options: { batchSizeOverride?: number; discoveryOnly?: boolean } = {}) {
   const startedAt = new Date().toISOString();
   const target = configuredNumber("OPPORTUNITY_INDEX_TARGET", 500, 100, 1_000);
-  const batchSize = configuredNumber("OPPORTUNITY_INDEX_BATCH_SIZE", 24, 1, 30);
+  const configuredBatchSize = configuredNumber("OPPORTUNITY_INDEX_BATCH_SIZE", 24, 1, 30);
+  const batchSizeOverride = options.batchSizeOverride == null
+    ? undefined
+    : Math.min(6, Math.max(1, Math.round(options.batchSizeOverride)));
   const concurrency = configuredNumber("OPPORTUNITY_INDEX_CONCURRENCY", 4, 1, 6);
   const state = await readOpportunityIndex().catch(() => null) ?? emptyState(startedAt);
   let discoveryError: string | undefined;
+  let discoveryChanged = false;
 
   if (!state.lastDiscoveryAt || Date.now() - Date.parse(state.lastDiscoveryAt) >= dayMs || state.repositories.length < Math.min(100, target)) {
     try {
       const discovered = await discoverRepositoryUniverse(false, target);
       state.repositories = mergeRepositorySeeds(state.repositories, discovered).slice(0, target);
       state.lastDiscoveryAt = startedAt;
+      discoveryChanged = true;
     } catch (error) {
       discoveryError = error instanceof Error ? error.message : "Repository discovery failed.";
     }
   }
 
   const availableRepositories = new Set(state.records.map((record) => `${record.owner}/${record.repo}`.toLowerCase())).size;
-  const effectiveBatchSize = availableRepositories < 60 ? Math.max(batchSize, 30) : batchSize;
+
+  if (options.discoveryOnly) {
+    if (discoveryChanged) {
+      state.updatedAt = startedAt;
+      await writeOpportunityIndex(state);
+    }
+    return {
+      persistent: isPersistentOpportunityIndexConfigured(),
+      discovered: state.repositories.length,
+      indexed: state.repositories.filter((entry) => entry.indexedAt).length,
+      available: availableRepositories,
+      refreshed: 0,
+      failed: 0,
+      checkedAt: state.updatedAt,
+      discoveryError,
+    };
+  }
+
+  const effectiveBatchSize = batchSizeOverride ?? (availableRepositories < 60 ? Math.max(configuredBatchSize, 30) : configuredBatchSize);
   const selected = [...state.repositories]
     .sort((a, b) => Date.parse(a.indexedAt ?? "1970-01-01") - Date.parse(b.indexedAt ?? "1970-01-01"))
     .slice(0, effectiveBatchSize);
