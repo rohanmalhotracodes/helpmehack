@@ -1,0 +1,61 @@
+name: Label external contributions
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  label:
+    if: >
+      (github.event_name == 'issues' &&
+       github.event.issue.author_association != 'OWNER' &&
+       github.event.issue.author_association != 'MEMBER' &&
+       github.event.issue.author_association != 'COLLABORATOR') ||
+      (github.event_name == 'pull_request_target' &&
+       github.event.pull_request.author_association != 'OWNER' &&
+       github.event.pull_request.author_association != 'MEMBER' &&
+       github.event.pull_request.author_association != 'COLLABORATOR')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add maintainer review label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = {
+              name: "needs maintainer review",
+              color: "FBCA04",
+              description: "External contribution awaiting maintainer triage or review"
+            };
+
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: label.name,
+              });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ...label,
+              });
+            }
+
+            const issueNumber =
+              context.payload.issue?.number ??
+              context.payload.pull_request?.number;
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: [label.name],
+            });
