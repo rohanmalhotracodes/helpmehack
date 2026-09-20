@@ -4,7 +4,7 @@ import { getOpportunityData } from "@/lib/provider";
 
 export const metadata: Metadata = {
   title: "HelpMeHack | Open source worth starting",
-  description: "Find open-source projects and issues to contribute to. Read the Overlooked feed for practical advice, or explore the repository directory.",
+  description: "Find open-source projects and issues to contribute to. Read the Feed for practical advice, or explore the Repos directory.",
   alternates: { canonical: "https://www.helpmehack.tech" },
 };
 
