@@ -4,6 +4,9 @@ frontend:
     preBuild:
       commands:
         - nvm use 22 || nvm install 22
+        - node --version
+        - npm --version
+        - rm -rf node_modules
         - npm install --no-audit --no-fund
     build:
       commands:
@@ -15,4 +18,4 @@ frontend:
       - '**/*'
   cache:
     paths:
-      - node_modules/**/*
+      - .next/cache/**/*
