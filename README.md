@@ -41,23 +41,37 @@ All credentials are read only in server code. Current issue evidence is cached f
 
 ## Persistent repository index
 
-Production can serve a durable repository snapshot from Upstash Redis instead of rebuilding the feed during a visitor request. Create an Upstash Redis database directly and configure its provider-neutral REST credentials:
+Production stores the durable repository snapshot in **Amazon DynamoDB**.
+
+Create a DynamoDB table with:
+
+```text
+Table name: helpmehack-opportunity-index
+Partition key: pk (String)
+Sort key: sk (String)
+Billing mode: On-demand
+```
+
+Then configure:
 
 ```bash
-UPSTASH_REDIS_REST_URL=https://your-database.upstash.io
-UPSTASH_REDIS_REST_TOKEN=your_rest_token
+HELPMEHACK_DYNAMODB_TABLE=helpmehack-opportunity-index
+# Optional when the table is in a different region:
+HELPMEHACK_DYNAMODB_REGION=ap-south-1
+
 OPPORTUNITY_INDEX_TARGET=500
 OPPORTUNITY_INDEX_BATCH_SIZE=24
 OPPORTUNITY_INDEX_CONCURRENCY=4
+OPPORTUNITY_INDEX_KEY=helpmehack:opportunity-index:v1
 ```
 
-Redis credentials remain server-only. For Amplify Hosting, configure only the variables you need in the Amplify app settings.
+Attach an Amplify SSR compute IAM role that allows the application to query and write only this DynamoDB table. Do not configure static AWS access keys in Amplify.
 
-For unattended indexing, set `REFRESH_SECRET` on the deployed site, then add `HELPMEHACK_URL` and the same `REFRESH_SECRET` as GitHub repository secrets. The included workflow calls the protected index worker at minute 17 of every hour and can also be run manually.
+For unattended indexing, set `REFRESH_SECRET` on the deployed site, then add `HELPMEHACK_URL` and the same `REFRESH_SECRET` as GitHub repository secrets. The included GitHub Actions workflow calls the protected index worker at minute 17 of every hour and can also be run manually.
 
-The worker refreshes the discovery universe daily, targeting 500 repositories by default. It combines the reviewed catalog with active GitHub repositories carrying `good-first-issue`, `help-wanted`, or `hacktoberfest` topics. An automatically discovered project must still have at least 100 stars, 10 forks, six months of history, recent maintenance evidence, contribution documentation, and a genuinely open contribution-labelled issue. Each hourly run enriches at least 24 least-recently checked repositories, temporarily increasing to 30 while the live index has fewer than 60 available repositories, retains successful older snapshots when a request fails, and removes a repository’s old card when a successful check finds no eligible issue. At the default settings, the first 500-repository pass completes in roughly 25 hourly runs. Visitor requests read the stored snapshot immediately; opening a card still performs a current, deeper issue check.
+The worker refreshes the discovery universe daily, targeting 500 repositories by default. It combines the reviewed catalog with active GitHub repositories carrying `good-first-issue`, `help-wanted`, or `hacktoberfest` topics. An automatically discovered project must still have at least 100 stars, 10 forks, six months of history, recent maintenance evidence, contribution documentation, and a genuinely open contribution-labelled issue. Each hourly run enriches at least 24 least-recently checked repositories, temporarily increasing to 30 while the live index has fewer than 60 available repositories, retains successful older snapshots when a request fails, and removes a repository's old card when a successful check finds no eligible issue. Visitor requests read the stored DynamoDB snapshot immediately; opening a card still performs a current, deeper issue check.
 
-Without Redis credentials, the application retains its live GitHub fallback and an in-process cache, but that fallback is not durable across server instances or deployments.
+Without DynamoDB configuration, the application retains its live GitHub fallback and an in-process cache, but that fallback is not durable across server instances or deployments.
 
 
 ## AWS deployment
