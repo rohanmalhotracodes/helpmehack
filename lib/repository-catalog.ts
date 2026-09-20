@@ -83,7 +83,6 @@ export const REPOSITORY_CATALOG: RepositoryCatalogEntry[] = [
   { repo: "django/django", tier: "high-impact", label: "easy pickings" },
   { repo: "python/cpython", tier: "high-impact", label: "easy" },
   { repo: "dotnet/runtime", tier: "high-impact", label: "help wanted" },
-  { repo: "vercel/next.js", tier: "high-impact", label: "help wanted" },
   { repo: "apache/airflow", tier: "high-impact", label: "good first issue" },
   { repo: "grafana/grafana", tier: "high-impact", label: "help wanted" },
   { repo: "home-assistant/core", tier: "high-impact", label: "help wanted" },
