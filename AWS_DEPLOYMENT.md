@@ -20,7 +20,7 @@ No Docker, ECR, ECS, EC2, or Application Load Balancer is required.
 3. Choose **GitHub** as the repository provider.
 4. Authorize AWS Amplify if prompted.
 5. Select `rohanmalhotracodes/helpmehack`.
-6. Select branch `aws-deployment`.
+6. Select branch `aws-amplify`.
 7. On the app settings page, let Amplify create and use a new service role.
 8. Confirm the build settings are loaded from `amplify.yml`.
 9. Choose **Save and deploy**.
@@ -44,7 +44,7 @@ UPSTASH_REDIS_REST_URL
 UPSTASH_REDIS_REST_TOKEN
 
 OPPORTUNITY_INDEX_TARGET=500
-OPPORTUNITY_INDEX_BATCH_SIZE=20
+OPPORTUNITY_INDEX_BATCH_SIZE=24
 OPPORTUNITY_INDEX_CONCURRENCY=4
 OPPORTUNITY_INDEX_KEY=helpmehack:opportunity-index:v1
 
