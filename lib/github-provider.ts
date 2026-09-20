@@ -782,7 +782,7 @@ export async function getRepositoryOpportunityData(owner: string, repo: string, 
 export async function getRepositoryIndexRecords(owner: string, repo: string, requestedTiers: DiscoveryTier[] = []): Promise<OpenSourceOpportunity[]> {
   if (!/^[a-z0-9_.-]{1,100}$/i.test(owner) || !/^[a-z0-9_.-]{1,100}$/i.test(repo)) return [];
   const path = `/repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=30&labels=`;
-  const discoveryLabels = [...new Set(["good first issue", "help wanted", ...labelsForCatalogRepository(`${owner}/${repo}`)])];
+  const discoveryLabels = [...new Set(["good first issue", "help wanted", "hacktoberfest", "contribution welcome", "contributions welcome", "open for contributions", ...labelsForCatalogRepository(`${owner}/${repo}`)])];
   const issueGroups = await Promise.all(discoveryLabels.map((label) => getJson<GitHubIssue[]>(`${path}${encodeURIComponent(label)}`, false, true).catch(() => null)));
   const candidates = mergeCandidatePools(issueGroups.map((issues, index) => {
     const inferredTier: DiscoveryTier = /good first|first[-\s]timers?|beginner|easy/i.test(discoveryLabels[index]) ? "beginner" : "moderate";
