@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Open-source contribution guide
+    url: https://www.helpmehack.tech/contribute
+    about: Read HelpMeHack's contribution guidance before opening a general contribution question.
