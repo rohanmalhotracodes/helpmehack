@@ -7,7 +7,7 @@ const API_ROOT = "https://api.github.com";
 const API_VERSION = "2026-03-10";
 const WINDOW_DAYS = 90;
 const MAX_ISSUES_PER_REPOSITORY = 1;
-const MAX_FEED_ISSUES = hasGitHubAuthentication() ? 36 : 9;
+const MAX_FEED_ISSUES = hasGitHubAuthentication() ? 84 : 12;
 const CLAIM_PATTERN = /(?:\bi(?:'m| am|’m| would be| can| will|'ll|’ll| want to| would like to)\b.{0,45}\b(?:work|take|pick|handle|implement|fix)|\bassign (?:this to )?me\b|\/assign\b|\bworking on this\b)/i;
 const ASK_LABEL_PATTERN = /(?:discussion|needs approval|proposal|needs design|needs info)/i;
 const BLOCKED_LABEL_PATTERN = /(?:^|\b)(?:blocked|on hold|waiting)(?:$|\b)/i;
@@ -701,8 +701,38 @@ export class GitHubOpportunityProvider {
         limit: group.repositories.length,
         query: `is:issue is:open archived:false no:assignee updated:>=${updatedSince} label:"${group.label}" ${group.repositories.map((repo) => `repo:${repo}`).join(" ")}`,
       }));
-    const searches = catalogSearches;
-    const responses = await Promise.all(searches.map(({ query }) => githubFetch(`/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc&per_page=50`, force).catch(() => new Response(null, { status: 503 }))));
+    const broadSearches = authenticated ? [
+      {
+        tier: "beginner" as const,
+        label: "good first issue",
+        repositories: [] as string[],
+        limit: 36,
+        query: `is:issue is:open archived:false no:assignee updated:>=${updatedSince} label:"good first issue"`,
+      },
+      {
+        tier: "moderate" as const,
+        label: "help wanted",
+        repositories: [] as string[],
+        limit: 36,
+        query: `is:issue is:open archived:false no:assignee updated:>=${updatedSince} label:"help wanted"`,
+      },
+      {
+        tier: "moderate" as const,
+        label: "hacktoberfest",
+        repositories: [] as string[],
+        limit: 24,
+        query: `is:issue is:open archived:false no:assignee updated:>=${updatedSince} label:"hacktoberfest"`,
+      },
+      {
+        tier: "moderate" as const,
+        label: "contribution welcome",
+        repositories: [] as string[],
+        limit: 18,
+        query: `is:issue is:open archived:false no:assignee updated:>=${updatedSince} label:"contribution welcome"`,
+      },
+    ] : [];
+    const searches = [...catalogSearches, ...broadSearches];
+    const responses = await Promise.all(searches.map(({ query }) => githubFetch(`/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc&per_page=100`, force).catch(() => new Response(null, { status: 503 }))));
     if (responses.every((response) => !response.ok)) throw new Error(`GitHub searches failed with ${responses.map((response) => response.status).join(", ")}.`);
     const data = await Promise.all(responses.map(async (response): Promise<SearchResponse> => response.ok ? response.json() as Promise<SearchResponse> : { items: [] }));
     const checkedAt = new Date().toISOString();
@@ -714,7 +744,7 @@ export class GitHubOpportunityProvider {
       1,
       searches[index].repositories.length ? new Set(searches[index].repositories.map((repo) => repo.toLowerCase())) : undefined,
     )), discovered], 1);
-    const records = await enrichCandidates(candidates, force, checkedAt, false);
+    const records = await enrichCandidates(candidates, force, checkedAt, false, true);
     if (!records.length) throw new Error("GitHub returned no eligible issue records after availability checks.");
     const rateResponse = responses.find((response) => response.ok) ?? responses[0];
     const remaining = Number(rateResponse.headers.get("x-ratelimit-remaining") ?? "0");
@@ -731,7 +761,7 @@ export class GitHubOpportunityProvider {
 export async function getRepositoryOpportunityData(owner: string, repo: string, requestedTiers: DiscoveryTier[] = []): Promise<OpportunityPayload> {
   if (!/^[a-z0-9_.-]{1,100}$/i.test(owner) || !/^[a-z0-9_.-]{1,100}$/i.test(repo)) throw new Error("Invalid repository name.");
   const path = `/repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=30&labels=`;
-  const discoveryLabels = [...new Set(["good first issue", "help wanted", ...labelsForCatalogRepository(`${owner}/${repo}`)])];
+  const discoveryLabels = [...new Set(["good first issue", "help wanted", "hacktoberfest", "contribution welcome", "contributions welcome", "open for contributions", ...labelsForCatalogRepository(`${owner}/${repo}`)])];
   const issueGroups = await Promise.all(discoveryLabels.map((label) => getJson<GitHubIssue[]>(`${path}${encodeURIComponent(label)}`, false)));
   const addTiers = (items: Candidate[], tiers: DiscoveryTier[]) => items.map((candidate) => ({ ...candidate, tiers: [...new Set([...candidate.tiers, ...tiers])] }));
   const candidates = mergeCandidatePools(issueGroups.map((issues, index) => addTiers(
@@ -752,7 +782,7 @@ export async function getRepositoryOpportunityData(owner: string, repo: string, 
 export async function getRepositoryIndexRecords(owner: string, repo: string, requestedTiers: DiscoveryTier[] = []): Promise<OpenSourceOpportunity[]> {
   if (!/^[a-z0-9_.-]{1,100}$/i.test(owner) || !/^[a-z0-9_.-]{1,100}$/i.test(repo)) return [];
   const path = `/repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=30&labels=`;
-  const discoveryLabels = [...new Set(["good first issue", "help wanted", ...labelsForCatalogRepository(`${owner}/${repo}`)])];
+  const discoveryLabels = [...new Set(["good first issue", "help wanted", "hacktoberfest", "contribution welcome", "contributions welcome", "open for contributions", ...labelsForCatalogRepository(`${owner}/${repo}`)])];
   const issueGroups = await Promise.all(discoveryLabels.map((label) => getJson<GitHubIssue[]>(`${path}${encodeURIComponent(label)}`, false, true).catch(() => null)));
   const candidates = mergeCandidatePools(issueGroups.map((issues, index) => {
     const inferredTier: DiscoveryTier = /good first|first[-\s]timers?|beginner|easy/i.test(discoveryLabels[index]) ? "beginner" : "moderate";
