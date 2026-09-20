@@ -1,7 +1,7 @@
 const questions = [
   {
     question: "What is HelpMeHack?",
-    answer: "HelpMeHack helps you find open-source projects and issues you can contribute to. Its Overlooked feed shares practical advice for contributors.",
+    answer: "HelpMeHack helps you find open-source projects and issues you can contribute to. The Feed shares practical advice for contributors.",
   },
   {
     question: "Who is it for?",
