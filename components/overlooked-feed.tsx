@@ -7,7 +7,7 @@ const posts = [
     id: "hacktoberfest-2026",
     eyebrow: "Hacktoberfest 2026",
     title: "Hacktoberfest is coming up this October.",
-    body: "Hacktoberfest returns in October as a month-long celebration of open source. The 2026 edition includes 300+ online and in-person events and a focus on open-source AI. HelpMeHack will keep surfacing contribution-ready repositories as participating projects become active.",
+    body: "Hacktoberfest returns in October as a month-long celebration of open source. The 2026 edition includes 300+ online and in-person events focused on open-source AI, run by MLH and DEV in partnership with DigitalOcean. HelpMeHack will keep surfacing contribution-ready repositories as participating projects become active.",
     source: "Official Hacktoberfest 2026",
     href: "https://hacktoberfest.com/",
     icon: CalendarDays,
