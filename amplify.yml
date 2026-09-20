@@ -6,7 +6,9 @@ frontend:
         - nvm use 22 || nvm install 22
         - node --version
         - npm --version
-        - rm -rf node_modules
+        - npm install --global npm@11.19.1 --no-audit --no-fund
+        - npm --version
+        - if [ -d node_modules ]; then mv node_modules "/tmp/helpmehack-node_modules-${AWS_JOB_ID:-stale}"; fi
         - npm install --no-audit --no-fund
     build:
       commands:
