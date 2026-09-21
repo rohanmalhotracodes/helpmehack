@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { ContributionPageShell } from "@/components/contribution-page-shell";
 
 const description = "HelpMeHack combines an open-source contribution directory with an editorial feed for beginners and experienced developers.";
-const url = "https://main.d27aveplt50hl3.amplifyapp.com/about";
+const url = "https://helpmehack.tech/about";
 
 export const metadata: Metadata = {
   title: "About HelpMeHack",
