@@ -9,10 +9,7 @@ const siteDescription =
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: {
-    default: "HelpMeHack — Find open source projects worth contributing to",
-    template: "%s | HelpMeHack",
-  },
+  title: "HelpMeHack — Find open source projects worth contributing to",
   description: siteDescription,
   applicationName: siteName,
   authors: [{ name: "HelpMeHack" }],
@@ -72,11 +69,6 @@ const websiteStructuredData = {
   url: siteUrl,
   name: siteName,
   description: siteDescription,
-  potentialAction: {
-    "@type": "SearchAction",
-    target: `${siteUrl}/?q={search_term_string}`,
-    "query-input": "required name=search_term_string",
-  },
 };
 
 const organizationStructuredData = {
