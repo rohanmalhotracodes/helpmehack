@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const baseUrl = "https://main.d27aveplt50hl3.amplifyapp.com";
+const baseUrl = "https://helpmehack.tech";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
