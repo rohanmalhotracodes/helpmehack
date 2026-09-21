@@ -35,6 +35,7 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
 
   useEffect(() => {
     const syncView = () => {
+      setActiveRepository(null);
       const next = window.location.hash === "#open-source" ? "open-source" : window.location.hash === "#feed" ? "overlooked" : "home";
       setView(next);
       reportView(next);
@@ -63,6 +64,7 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
   }, [payload.refreshIntervalMs, refresh]);
 
   const navigate = (next: View) => {
+    setActiveRepository(null);
     if (view === "overlooked" && next === "open-source") trackFunnel("feed_to_repos_clicked", {});
     setView(next);
     setMenuOpen(false);
