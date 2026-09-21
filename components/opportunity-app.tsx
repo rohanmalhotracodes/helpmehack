@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { trackFunnel } from "@/lib/analytics";
 import { HomeLanding } from "./home-landing";
 import { SiteFooter } from "./site-footer";
@@ -109,6 +110,7 @@ function TopNav({ view, onNavigate, theme, onToggleTheme, onMenu }: { view: View
         <nav className="ml-auto hidden h-full items-center gap-1 sm:flex" aria-label="Primary navigation">
           <NavButton active={view === "overlooked"} onClick={() => onNavigate("overlooked")} icon={BookOpenText}>Feed</NavButton>
           <NavButton active={view === "open-source"} onClick={() => onNavigate("open-source")} icon={GitFork}>Repos</NavButton>
+          <Link href="/programs" className="focus-ring x-muted flex h-full items-center px-4 text-sm font-semibold hover:text-[var(--text)]">Programs</Link>
         </nav>
         <button onClick={onToggleTheme} className="focus-ring x-muted ml-auto grid h-10 w-10 place-items-center rounded-full hover:bg-[var(--surface-raised)] sm:ml-0" aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>{theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}</button>
         <button onClick={onMenu} className="focus-ring x-border x-text grid h-10 w-10 place-items-center rounded-full border sm:hidden" aria-label="Open navigation"><Menu size={18} /></button>
@@ -130,6 +132,7 @@ function MobileNav({ view, onNavigate, onClose }: { view: View; onNavigate: (vie
         <nav className="mt-5 space-y-1" aria-label="Mobile navigation">
           <button onClick={() => onNavigate("overlooked")} className={`focus-ring flex h-12 w-full items-center gap-3 rounded-full px-4 text-sm font-bold ${view === "overlooked" ? "x-primary" : "x-text hover:bg-[var(--surface-raised)]"}`}><BookOpenText size={18} />Feed</button>
           <button onClick={() => onNavigate("open-source")} className={`focus-ring flex h-12 w-full items-center gap-3 rounded-full px-4 text-sm font-bold ${view === "open-source" ? "x-primary" : "x-text hover:bg-[var(--surface-raised)]"}`}><GitFork size={18} />Repos</button>
+          <Link href="/programs" onClick={onClose} className="focus-ring x-text flex h-12 w-full items-center gap-3 rounded-full px-4 text-sm font-bold hover:bg-[var(--surface-raised)]">Programs</Link>
         </nav>
       </aside>
     </div>
