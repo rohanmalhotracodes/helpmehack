@@ -53,10 +53,10 @@ export function OverlookedFeed({ onOpenSource }: { onOpenSource: () => void }) {
   return (
     <main id="main-content" className="mx-auto w-full max-w-[1080px] px-0 sm:px-5">
       <div className="grid items-start lg:grid-cols-[minmax(0,680px)_300px] lg:gap-7">
-        <section className="x-border border-x" aria-labelledby="overlooked-title">
+        <section className="x-border border-x" aria-labelledby="feed-title">
           <header className="x-border border-b px-4 py-4 sm:px-5">
-            <h1 id="overlooked-title" className="x-text text-xl font-bold tracking-tight">Overlooked</h1>
-            <p className="x-muted mt-1 text-sm">Important context beginners often miss, posted only by HelpMeHack.</p>
+            <h1 id="feed-title" className="x-text text-xl font-bold tracking-tight">Feed</h1>
+            <p className="x-muted mt-1 text-sm">Practical open-source context and contribution advice from HelpMeHack.</p>
           </header>
           <div className="divide-y x-border">
             {posts.map((post) => {
@@ -80,7 +80,7 @@ export function OverlookedFeed({ onOpenSource }: { onOpenSource: () => void }) {
           </div>
         </section>
 
-        <aside className="sticky top-20 hidden space-y-4 lg:block" aria-label="Overlooked feed information">
+        <aside className="sticky top-20 hidden space-y-4 lg:block" aria-label="Feed information">
           <div className="card overlooked-aside-card p-4">
             <h2 className="x-text text-base font-bold">No engagement bait</h2>
             <p className="x-muted mt-2 text-sm leading-5">This is a read-only editorial feed. There are no likes, replies, reposts, follower counts, or sponsored posts.</p>
@@ -88,7 +88,7 @@ export function OverlookedFeed({ onOpenSource }: { onOpenSource: () => void }) {
           <div className="card overlooked-aside-card p-4">
             <h2 className="x-text text-base font-bold">Ready to contribute?</h2>
             <p className="x-muted mt-2 text-sm leading-5">Browse issues ranked using availability, setup guidance, maintainer activity, and newcomer pull-request evidence.</p>
-            <button onClick={onOpenSource} className="focus-ring x-primary mt-4 inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-bold">Open source <ArrowUpRight size={14} /></button>
+            <button onClick={onOpenSource} className="focus-ring x-primary mt-4 inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-bold">Browse repos <ArrowUpRight size={14} /></button>
           </div>
         </aside>
       </div>
