@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://www.helpmehack.tech/sitemap.xml",
-    host: "https://www.helpmehack.tech",
+    sitemap: "https://main.d27aveplt50hl3.amplifyapp.com/sitemap.xml",
+    host: "https://main.d27aveplt50hl3.amplifyapp.com",
   };
 }

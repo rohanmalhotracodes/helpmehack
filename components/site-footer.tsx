@@ -21,6 +21,8 @@ export function SiteFooter({ onNavigate }: { onNavigate?: (view: "overlooked" | 
           <a href="https://opensource.guide/how-to-contribute/" target="_blank" rel="noreferrer" className={linkClass}>Contributor guide</a>
           <a href="https://docs.github.com/en/rest" target="_blank" rel="noreferrer" className={linkClass}>GitHub data</a>
           <a href="https://github.com/rohanmalhotracodes/helpmehack" target="_blank" rel="noreferrer" className={linkClass}>Source code</a>
+          <Link href="/terms" className={linkClass}>Terms</Link>
+          <Link href="/privacy" className={linkClass}>Privacy</Link>
         </nav>
       </div>
     </footer>
