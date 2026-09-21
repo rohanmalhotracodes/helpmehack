@@ -93,13 +93,13 @@ function TopNav({ view, onNavigate, theme, onToggleTheme, onMenu }: { view: View
   return (
     <header className="x-border sticky top-0 z-30 border-b bg-[color:var(--background)]/95 backdrop-blur">
       <div className="mx-auto flex h-[61px] max-w-[1240px] items-center gap-4 px-3 sm:px-5">
-        <button onClick={() => onNavigate("overlooked")} className="focus-ring flex shrink-0 items-center gap-2 rounded-lg" aria-label="HelpMeHack — open Overlooked">
+        <button onClick={() => onNavigate("overlooked")} className="focus-ring flex shrink-0 items-center gap-2 rounded-lg" aria-label="HelpMeHack — open Feed">
           <Image src="/helpmehack-mark.png" width={34} height={34} priority alt="" className="logo-mark h-[34px] w-[34px] rounded-lg" />
           <span className="x-text hidden text-sm font-bold tracking-tight sm:block">helpmehack</span>
         </button>
         <nav className="ml-auto hidden h-full items-center gap-1 sm:flex" aria-label="Primary navigation">
-          <NavButton active={view === "overlooked"} onClick={() => onNavigate("overlooked")} icon={BookOpenText}>Overlooked</NavButton>
-          <NavButton active={view === "open-source"} onClick={() => onNavigate("open-source")} icon={GitFork}>Open Source</NavButton>
+          <NavButton active={view === "overlooked"} onClick={() => onNavigate("overlooked")} icon={BookOpenText}>Feed</NavButton>
+          <NavButton active={view === "open-source"} onClick={() => onNavigate("open-source")} icon={GitFork}>Repos</NavButton>
         </nav>
         <button onClick={onToggleTheme} className="focus-ring x-muted ml-auto grid h-10 w-10 place-items-center rounded-full hover:bg-[var(--surface-raised)] sm:ml-0" aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>{theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}</button>
         <button onClick={onMenu} className="focus-ring x-border x-text grid h-10 w-10 place-items-center rounded-full border sm:hidden" aria-label="Open navigation"><Menu size={18} /></button>
@@ -119,8 +119,8 @@ function MobileNav({ view, onNavigate, onClose }: { view: View; onNavigate: (vie
       <aside className="x-border absolute inset-y-0 right-0 w-[min(82vw,300px)] border-l bg-[var(--background)] p-4 shadow-2xl">
         <div className="flex items-center justify-between"><p className="x-text text-sm font-bold">Navigate</p><button autoFocus onClick={onClose} className="focus-ring x-muted grid h-10 w-10 place-items-center rounded-full hover:bg-[var(--surface-raised)]" aria-label="Close navigation"><X size={18} /></button></div>
         <nav className="mt-5 space-y-1" aria-label="Mobile navigation">
-          <button onClick={() => onNavigate("overlooked")} className={`focus-ring flex h-12 w-full items-center gap-3 rounded-full px-4 text-sm font-bold ${view === "overlooked" ? "x-primary" : "x-text hover:bg-[var(--surface-raised)]"}`}><BookOpenText size={18} />Overlooked</button>
-          <button onClick={() => onNavigate("open-source")} className={`focus-ring flex h-12 w-full items-center gap-3 rounded-full px-4 text-sm font-bold ${view === "open-source" ? "x-primary" : "x-text hover:bg-[var(--surface-raised)]"}`}><GitFork size={18} />Open Source</button>
+          <button onClick={() => onNavigate("overlooked")} className={`focus-ring flex h-12 w-full items-center gap-3 rounded-full px-4 text-sm font-bold ${view === "overlooked" ? "x-primary" : "x-text hover:bg-[var(--surface-raised)]"}`}><BookOpenText size={18} />Feed</button>
+          <button onClick={() => onNavigate("open-source")} className={`focus-ring flex h-12 w-full items-center gap-3 rounded-full px-4 text-sm font-bold ${view === "open-source" ? "x-primary" : "x-text hover:bg-[var(--surface-raised)]"}`}><GitFork size={18} />Repos</button>
         </nav>
       </aside>
     </div>
