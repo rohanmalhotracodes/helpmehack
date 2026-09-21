@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-export function SiteFooter({ onNavigate }: { onNavigate?: (view: "overlooked" | "open-source") => void }) {
+export function SiteFooter() {
   const linkClass = "focus-ring rounded px-1 py-1 font-medium transition-colors hover:text-[var(--text)]";
   return (
     <footer className="x-border mt-12 border-t" aria-label="Site footer">
