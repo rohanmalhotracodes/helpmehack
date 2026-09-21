@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { detectAssignmentPolicySignal, findLinkedContributionDocuments, GitHubOpportunityProvider, isClaimedWorkLabel, isStaleWorkLabel, referencesIssueWithClosingKeyword, summarizeRepositoryGuidance } from "./github-provider";
+import { detectAssignmentPolicySignal, findLinkedContributionDocuments, GitHubOpportunityProvider, getRepositoryOpportunityData, getRepositoryIndexRecords, isClaimedWorkLabel, isStaleWorkLabel, referencesIssueWithClosingKeyword, summarizeRepositoryGuidance } from "./github-provider";
 
 const json = (value: unknown, init?: ResponseInit) => new Response(JSON.stringify(value), {
   status: 200,
@@ -56,6 +56,8 @@ describe("GitHubOpportunityProvider", () => {
     expect(referencesIssueWithClosingKeyword("Related to #7", "acme", "widgets", 7)).toBe(false);
     expect(referencesIssueWithClosingKeyword("Fixes #7", "acme", "widgets", 7)).toBe(true);
     expect(referencesIssueWithClosingKeyword("Closes acme/widgets#7", "acme", "widgets", 7)).toBe(true);
+    expect(referencesIssueWithClosingKeyword("Fixes: https://github.com/acme/widgets/issues/7", "acme", "widgets", 7)).toBe(true);
+    expect(referencesIssueWithClosingKeyword("Fixes: https://github.com/other/widgets/issues/7", "acme", "widgets", 7)).toBe(false);
   });
 
   it("distinguishes documented assignment policies", () => {
@@ -81,6 +83,15 @@ New contributors can only claim one issue until their first pull request is merg
     expect(guidance.assignmentSteps).toContain("Post `@zulipbot claim` in the issue thread and wait for the assignment to appear.");
     expect(guidance.assignmentSteps).toContain("Claim only one issue until your first pull request is merged.");
     expect(guidance.assignmentEvidence).toBe("documented");
+  });
+
+  it("does not turn a no-wait instruction into an assignment prerequisite", () => {
+    const guidance = summarizeRepositoryGuidance("CircuitVerse/CircuitVerse", "https://github.com/CircuitVerse/CircuitVerse", [{
+      source: { label: "Contribution guide", href: "https://github.com/CircuitVerse/CircuitVerse/blob/master/CONTRIBUTING.md", kind: "guide" },
+      text: "## How to Claim Issues\n1. Check that no one else has claimed it\n2. Leave a comment: I'd like to work on this\n3. Start working immediately - no need to wait for assignment",
+    }], new Date().toISOString());
+    expect(guidance.assignment).toContain("direct contributions");
+    expect(guidance.assignmentSteps).not.toContain("Wait for the documented confirmation before opening a pull request.");
   });
 
   it("treats an extracted contribution prerequisite as documented evidence", () => {
@@ -141,5 +152,26 @@ If your proof looks good, we'll assign the issue to you. Once assigned, submit a
     expect(isStaleWorkLabel("stale")).toBe(true);
     expect(isStaleWorkLabel("priority/awaiting-more-evidence")).toBe(true);
     expect(isStaleWorkLabel("fresh install")).toBe(false);
+  });
+});
+
+
+describe("repository directory detail eligibility", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("keeps a maintained small indexed repository eligible when opening its details", async () => {
+    const recent = new Date().toISOString();
+    const base = "https://api.github.com/repos/journey-fixture/widgets";
+    const issue = { id: 9876, number: 7, html_url: "https://github.com/journey-fixture/widgets/issues/7", repository_url: base, comments_url: `${base}/issues/7/comments`, title: "Improve error message", body: "Improve validation errors", labels: [{name: "good first issue"}], assignee: null, user: {login: "reporter"}, comments: 0, created_at: recent, updated_at: recent };
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/issues?")) return json([issue]);
+      if (url === base) return json({ full_name: "journey-fixture/widgets", name: "widgets", description: "A useful widget engine", html_url: "https://github.com/journey-fixture/widgets", language: "TypeScript", topics: [], owner: {login: "journey-fixture", type: "Organization"}, archived: false, disabled: false, stargazers_count: 1300, forks_count: 100, created_at: "2020-01-01T00:00:00Z", pushed_at: recent });
+      if (url.includes("/contents/CONTRIBUTING.md")) return json({ html_url: "https://github.com/journey-fixture/widgets/blob/main/CONTRIBUTING.md", encoding: "base64", content: Buffer.from("No need for assignment. Contributions welcome.").toString("base64") });
+      if (url.includes("/timeline?") || url.includes("/pulls?")) return json([]);
+      return json({}, {status: 404});
+    }));
+    expect(await getRepositoryIndexRecords("journey-fixture", "widgets")).toHaveLength(1);
+    const details = await getRepositoryOpportunityData("journey-fixture", "widgets");
+    expect(details.records).toHaveLength(1);
   });
 });

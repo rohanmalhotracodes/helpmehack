@@ -213,7 +213,7 @@ function assignmentSteps(text: string, botCommand?: string) {
   if (botCommand) add(`Post \`${botCommand}\` in the issue thread and wait for the assignment to appear.`);
   else if (/(?:leave|post).{0,100}comment.{0,160}(?:claim|assign)|ask.{0,100}(?:assigned|assignment)/i.test(plain)) add("Post the documented claim request in the issue thread.");
   if (/only (?:claim|work on|pick up) one issue.{0,180}(?:first|until).{0,100}(?:pull request|pr).{0,60}merged/i.test(plain)) add("Claim only one issue until your first pull request is merged.");
-  if (/(?:wait|once|until).{0,100}(?:assign|approval|confirm)|(?:we(?:'ll| will)|maintainers?).{0,100}assign/i.test(plain)) add("Wait for the documented confirmation before opening a pull request.");
+  if (policySignal(section) !== "direct" && /(?:wait|once|until).{0,100}(?:assign|approval|confirm)|(?:we(?:'ll| will)|maintainers?).{0,100}assign/i.test(plain)) add("Wait for the documented confirmation before opening a pull request.");
   return steps.slice(0, 8);
 }
 
@@ -276,7 +276,7 @@ function closesIssue(body: string | null | undefined, owner: string, repo: strin
   if (!body) return false;
   const escapedOwner = owner.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const escapedRepo = repo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`\\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\\s+(?:(?:${escapedOwner}/${escapedRepo})?#)${issueNumber}\\b`, "i").test(body);
+  return new RegExp(`\\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\\s*:?\\s+(?:(?:${escapedOwner}/${escapedRepo})?#|https://github\\.com/${escapedOwner}/${escapedRepo}/issues/)${issueNumber}\\b`, "i").test(body);
 }
 
 function policySignal(text: string | null | undefined): AssignmentPolicyKind | null {
@@ -769,7 +769,7 @@ export async function getRepositoryOpportunityData(owner: string, repo: string, 
     requestedTiers,
   ))).slice(0, 12);
   const checkedAt = new Date().toISOString();
-  const records = await enrichCandidates(candidates, false, checkedAt, true);
+  const records = await enrichCandidates(candidates, false, checkedAt, true, true);
   return {
     records,
     checkedAt,
