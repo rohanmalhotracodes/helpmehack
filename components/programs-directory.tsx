@@ -16,8 +16,8 @@ export function ProgramsDirectory({
 }) {
   const [program, setProgram] = useState<ProgramKind>("gsoc");
   const [query, setQuery] = useState("");
-  const [technology, setTechnology] = useState("All");
-  const [year, setYear] = useState<number | "All">(2026);
+  const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>([]);
+  const [selectedYears, setSelectedYears] = useState<number[]>([2026]);
 
   const source = program === "gsoc" ? gsoc : summerOfBitcoin;
   const availableYears = useMemo(
@@ -45,18 +45,29 @@ export function ProgramsDirectory({
         ...organization.topics,
         ...organization.latestRepositories.map((repository) => repository.label),
       ].join(" ").toLowerCase();
-      const yearMatch = year === "All" || organization.years.some((item) => item.year === year);
-      return (!needle || stack.includes(needle))
-        && (technology === "All" || organization.technologies.includes(technology))
+      const yearMatch = selectedYears.length === 0 || organization.years.some((item) => selectedYears.includes(item.year));
+      const technologyMatch = selectedTechnologies.length === 0 || organization.technologies.some((item) => selectedTechnologies.includes(item));
+      const toggleYear = (value: number) => {
+    setSelectedYears((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
+  };
+
+  const toggleTechnology = (value: string) => {
+    setSelectedTechnologies((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
+  };
+
+  const filtersActive = Boolean(query) || selectedYears.length > 0 || selectedTechnologies.length > 0;
+
+  return (!needle || stack.includes(needle))
+        && technologyMatch
         && yearMatch;
     });
-  }, [query, source, technology, year]);
+  }, [query, selectedTechnologies, selectedYears, source]);
 
   const switchProgram = (next: ProgramKind) => {
     setProgram(next);
     setQuery("");
-    setTechnology("All");
-    setYear(2026);
+    setSelectedTechnologies([]);
+    setSelectedYears([2026]);
   };
 
   return (
@@ -88,19 +99,28 @@ export function ProgramsDirectory({
         <div className="mt-4">
           <p className="x-muted mb-2 text-[11px] font-semibold uppercase tracking-[.12em]">Participation year</p>
           <div className="event-carousel flex gap-2 overflow-x-auto pb-1">
-            <button type="button" onClick={() => setYear("All")} aria-pressed={year === "All"} className={`focus-ring h-9 shrink-0 rounded-full border px-4 text-xs font-semibold ${year === "All" ? "x-primary border-transparent" : "x-border x-text hover:bg-[var(--surface-raised)]"}`}>All years</button>
-            {availableYears.map((item) => <button key={item} type="button" onClick={() => setYear(item)} aria-pressed={year === item} className={`focus-ring h-9 shrink-0 rounded-full border px-4 text-xs font-semibold ${year === item ? "x-primary border-transparent" : "x-border x-text hover:bg-[var(--surface-raised)]"}`}>{item}</button>)}
+            <button type="button" onClick={() => setSelectedYears([])} aria-pressed={selectedYears.length === 0} className={`focus-ring h-9 shrink-0 rounded-full border px-4 text-xs font-semibold ${selectedYears.length === 0 ? "x-primary border-transparent" : "x-border x-text hover:bg-[var(--surface-raised)]"}`}>All years</button>
+            {availableYears.map((item) => {
+              const selected = selectedYears.includes(item);
+              return <button key={item} type="button" onClick={() => toggleYear(item)} aria-pressed={selected} className={`focus-ring h-9 shrink-0 rounded-full border px-4 text-xs font-semibold ${selected ? "x-primary border-transparent" : "x-border x-text hover:bg-[var(--surface-raised)]"}`}>{item}</button>;
+            })}
           </div>
         </div>
 
         <div className="mt-4">
           <p className="x-muted mb-2 text-[11px] font-semibold uppercase tracking-[.12em]">Technology</p>
           <div className="event-carousel flex gap-2 overflow-x-auto pb-1">
-            <button type="button" onClick={() => setTechnology("All")} aria-pressed={technology === "All"} className={`focus-ring h-9 shrink-0 rounded-full border px-4 text-xs font-semibold ${technology === "All" ? "x-primary border-transparent" : "x-border x-text hover:bg-[var(--surface-raised)]"}`}>All</button>
-            {technologies.map(([name, count]) => <button key={name} type="button" onClick={() => setTechnology(name)} aria-pressed={technology === name} className={`focus-ring h-9 shrink-0 rounded-full border px-4 text-xs font-semibold ${technology === name ? "x-primary border-transparent" : "x-border x-text hover:bg-[var(--surface-raised)]"}`}>{name} <span className="opacity-60">{count}</span></button>)}
+            <button type="button" onClick={() => setSelectedTechnologies([])} aria-pressed={selectedTechnologies.length === 0} className={`focus-ring h-9 shrink-0 rounded-full border px-4 text-xs font-semibold ${selectedTechnologies.length === 0 ? "x-primary border-transparent" : "x-border x-text hover:bg-[var(--surface-raised)]"}`}>All</button>
+            {technologies.map(([name, count]) => {
+              const selected = selectedTechnologies.includes(name);
+              return <button key={name} type="button" onClick={() => toggleTechnology(name)} aria-pressed={selected} className={`focus-ring h-9 shrink-0 rounded-full border px-4 text-xs font-semibold ${selected ? "x-primary border-transparent" : "x-border x-text hover:bg-[var(--surface-raised)]"}`}>{name} <span className="opacity-60">{count}</span></button>;
+            })}
           </div>
         </div>
-        <p className="x-muted mt-3 text-xs">{filtered.length} {filtered.length === 1 ? "organization" : "organizations"} match the current view.</p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="x-muted text-xs">{filtered.length} {filtered.length === 1 ? "organization" : "organizations"} match the current view.</p>
+          {filtersActive && <button type="button" onClick={() => { setQuery(""); setSelectedYears([]); setSelectedTechnologies([]); }} className="focus-ring x-muted rounded text-xs font-semibold underline underline-offset-4 hover:text-[var(--text)]">Clear filters</button>}
+        </div>
       </section>
 
       <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
