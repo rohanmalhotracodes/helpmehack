@@ -5,6 +5,10 @@ export const dynamic = "force-dynamic";
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
 
+export async function GET() {
+  return NextResponse.json({ configured: Boolean(process.env.NEWSLETTER_ENDPOINT) }, { headers: { "Cache-Control": "no-store" } });
+}
+
 export async function POST(request: Request) {
   const endpoint = process.env.NEWSLETTER_ENDPOINT;
   if (!endpoint) return NextResponse.json({ error: "Newsletter signup is not configured yet." }, { status: 503 });
@@ -33,7 +37,7 @@ export async function POST(request: Request) {
       cache: "no-store",
     });
     if (!response.ok) throw new Error(`Provider returned ${response.status}`);
-    return NextResponse.json({ message: "You’re on the weekly list." });
+    return NextResponse.json({ message: "Your signup was sent to the newsletter provider." });
   } catch {
     return NextResponse.json({ error: "The newsletter provider is unavailable. Your address was not stored by HelpMeHack." }, { status: 502 });
   }

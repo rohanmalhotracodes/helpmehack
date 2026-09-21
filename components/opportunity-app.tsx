@@ -76,7 +76,7 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
         ? <HomeLanding onNavigate={navigate} />
         : view === "overlooked"
         ? <OverlookedFeed onOpenSource={() => navigate("open-source")} />
-        : <OpenSourceDirectory records={records} savedRepositoryIds={savedRepositories.items} savedIssueIds={saved.items} onSaveRepository={savedRepositories.toggle} onOpenRepository={(repository) => {
+        : <OpenSourceDirectory dataNotice={payload.mode === "demo" ? "Showing sample repositories. Current GitHub availability has not been confirmed." : payload.warning ? "Repository data may be out of date. Check the latest issue discussion on GitHub before starting." : undefined} records={records} savedRepositoryIds={savedRepositories.items} savedIssueIds={saved.items} onSaveRepository={savedRepositories.toggle} onOpenRepository={(repository) => {
           setActiveRepository(repository);
           trackFunnel("repository_opened", { repository });
         }} />}

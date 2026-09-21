@@ -11,6 +11,7 @@ export function SiteFooter({ onNavigate }: { onNavigate?: (view: "overlooked" | 
         <div className="flex flex-wrap items-center justify-center gap-2">
           <Image src="/helpmehack-mark.png" width={24} height={24} alt="" className="logo-mark h-6 w-6 rounded-md" />
           <p>© 2026 HelpMeHack</p>
+          <a href="https://tin.computer" className="focus-ring inline-flex items-center gap-1.5 rounded hover:text-[var(--text)]"><svg aria-hidden="true" viewBox="0 0 32 32" className="h-[1em] w-[1em]"><rect width="32" height="32" fill="#66DC9D" /></svg>Growth by Tin</a>
         </div>
         <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2" aria-label="Footer navigation">
           <Link href="/#feed" onClick={onNavigate ? (event) => { event.preventDefault(); onNavigate("overlooked"); } : undefined} className={linkClass}>Feed</Link>
