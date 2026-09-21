@@ -147,6 +147,8 @@ If your proof looks good, we'll assign the issue to you. Once assigned, submit a
 
   it("treats explicit work-state labels as claimed, without matching unrelated labels", () => {
     expect(isClaimedWorkLabel("in progress")).toBe(true);
+    expect(isClaimedWorkLabel("work-in-progress")).toBe(true);
+    expect(isClaimedWorkLabel("in_progress")).toBe(true);
     expect(isClaimedWorkLabel("claimed")).toBe(true);
     expect(isClaimedWorkLabel("progressive enhancement")).toBe(false);
     expect(isStaleWorkLabel("stale")).toBe(true);
@@ -161,10 +163,11 @@ describe("repository directory detail eligibility", () => {
   it("keeps a maintained small indexed repository eligible when opening its details", async () => {
     const recent = new Date().toISOString();
     const base = "https://api.github.com/repos/journey-fixture/widgets";
+    let assignees: Array<{login: string}> = [];
     const issue = { id: 9876, number: 7, html_url: "https://github.com/journey-fixture/widgets/issues/7", repository_url: base, comments_url: `${base}/issues/7/comments`, title: "Improve error message", body: "Improve validation errors", labels: [{name: "good first issue"}], assignee: null, user: {login: "reporter"}, comments: 0, created_at: recent, updated_at: recent };
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
-      if (url.includes("/issues?")) return json([issue]);
+      if (url.includes("/issues?")) return json([{...issue, assignee: undefined, assignees}]);
       if (url === base) return json({ full_name: "journey-fixture/widgets", name: "widgets", description: "A useful widget engine", html_url: "https://github.com/journey-fixture/widgets", language: "TypeScript", topics: [], owner: {login: "journey-fixture", type: "Organization"}, archived: false, disabled: false, stargazers_count: 1300, forks_count: 100, created_at: "2020-01-01T00:00:00Z", pushed_at: recent });
       if (url.includes("/contents/CONTRIBUTING.md")) return json({ html_url: "https://github.com/journey-fixture/widgets/blob/main/CONTRIBUTING.md", encoding: "base64", content: Buffer.from("No need for assignment. Contributions welcome.").toString("base64") });
       if (url.includes("/timeline?") || url.includes("/pulls?")) return json([]);
@@ -173,5 +176,8 @@ describe("repository directory detail eligibility", () => {
     expect(await getRepositoryIndexRecords("journey-fixture", "widgets")).toHaveLength(1);
     const details = await getRepositoryOpportunityData("journey-fixture", "widgets");
     expect(details.records).toHaveLength(1);
+    assignees = [{login: "existing-contributor"}];
+    expect(await getRepositoryIndexRecords("journey-fixture", "widgets")).toHaveLength(0);
+    expect((await getRepositoryOpportunityData("journey-fixture", "widgets")).records).toHaveLength(0);
   });
 });

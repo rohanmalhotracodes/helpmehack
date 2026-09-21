@@ -11,7 +11,7 @@ const MAX_FEED_ISSUES = hasGitHubAuthentication() ? 84 : 12;
 const CLAIM_PATTERN = /(?:\bi(?:'m| am|’m| would be| can| will|'ll|’ll| want to| would like to)\b.{0,45}\b(?:work|take|pick|handle|implement|fix)|\bassign (?:this to )?me\b|\/assign\b|\bworking on this\b)/i;
 const ASK_LABEL_PATTERN = /(?:discussion|needs approval|proposal|needs design|needs info)/i;
 const BLOCKED_LABEL_PATTERN = /(?:^|\b)(?:blocked|on hold|waiting)(?:$|\b)/i;
-const CLAIMED_LABEL_PATTERN = /(?:^|\b)(?:in progress|claimed|assigned)(?:$|\b)/i;
+const CLAIMED_LABEL_PATTERN = /(?:^|\b)(?:in[\s_-]+progress|claimed|assigned)(?:$|\b)/i;
 const STALE_LABEL_PATTERN = /(?:^|[\s/:_-])(?:stale|awaiting[-_\s]+more[-_\s]+evidence)(?:$|[\s/:_-])/i;
 const NOT_ACTIONABLE_LABEL_PATTERN = /(?:^|[\s/:_-])(?:deprioritized|not[-_\s]+planned|wontfix|duplicate)(?:$|[\s/:_-])/i;
 const CLOSED_TO_CONTRIBUTIONS_PATTERN = /(?:not|no longer|isn['’]t|is not) (?:currently )?accepting (?:external |community )?contributions|closed to (?:external |community )?contributions/i;
@@ -25,7 +25,7 @@ type GitHubUser = { login: string; avatar_url: string; type?: string };
 type GitHubLabel = string | { name?: string; color?: string };
 type GitHubIssue = {
   id: number; html_url: string; repository_url: string; comments_url: string; number: number; title: string; body: string | null;
-  labels: GitHubLabel[]; assignee: GitHubUser | null; user: GitHubUser; comments: number; created_at: string; updated_at: string; pull_request?: unknown;
+  labels: GitHubLabel[]; assignee?: GitHubUser | null; assignees?: GitHubUser[]; user: GitHubUser; comments: number; created_at: string; updated_at: string; pull_request?: unknown;
 };
 type GitHubRepo = {
   full_name: string; name: string; description: string | null; html_url: string; language: string | null; owner: GitHubUser;
@@ -492,6 +492,7 @@ async function getRepositoryContext(issue: GitHubIssue, labels: string[], force:
 
 async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: string, repositoryCache: Map<string, Promise<RepositoryContext | null>>, deepQuality: boolean, indexedDiscovery = false): Promise<OpenSourceOpportunity | null> {
   const { issue, tiers } = candidate;
+  const assignee = issue.assignees?.[0] ?? issue.assignee;
   const path = issue.repository_url.replace(`${API_ROOT}/repos/`, "");
   const [owner, repoName] = path.split("/");
   if (!owner || !repoName || issue.pull_request) return null;
@@ -515,10 +516,10 @@ async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: stri
   const blocked = labels.some((label) => BLOCKED_LABEL_PATTERN.test(label));
   const claimedByLabel = labels.some((label) => CLAIMED_LABEL_PATTERN.test(label));
   const asksFirst = labels.some((label) => ASK_LABEL_PATTERN.test(label));
-  const status: AvailabilityStatus = blocked ? "blocked" : issue.assignee || claimedByLabel ? "possibly-claimed" : openImplementations.length ? "linked-pr" : recentClaim ? "possibly-claimed"
+  const status: AvailabilityStatus = blocked ? "blocked" : assignee || claimedByLabel ? "possibly-claimed" : openImplementations.length ? "linked-pr" : recentClaim ? "possibly-claimed"
     : closedUnmergedImplementations.length ? "ask-first" : !comments || !timeline || unclearOpenReferences.length || policy.kind === "unknown" || policy.kind === "varies" ? "unknown"
       : asksFirst || policy.kind === "assignment-required" || policy.kind === "approval-required" ? "ask-first" : "unassigned";
-  const eligibleForDefault = !issue.assignee && !claimedByLabel && !blocked && !openImplementations.length;
+  const eligibleForDefault = !assignee && !claimedByLabel && !blocked && !openImplementations.length;
   const maintainerReplies = (comments ?? []).filter((comment) => isMaintainer(comment.author_association) && !isBot(comment.user)).length;
   const onboardingPoints = repositoryQuality.factors.find((factor) => factor.key === "onboarding")?.earned ?? 0;
   const issueScores = scoreIssue({ body: issue.body, title: issue.title, labels, language: repo.language, onboardingPoints, hasMaintainerDirection: maintainerReplies > 0, blocked, repositoryScore: repositoryQuality.score });
@@ -528,7 +529,7 @@ async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: stri
   if (repositoryGuidance.source && !sources.some((source) => source.href === repositoryGuidance.source?.href)) sources.push(repositoryGuidance.source);
   references.slice(0, 3).forEach((pr, index) => { if (pr.html_url) sources.push({ label: pr.title || `Timeline-referenced PR ${index + 1}`, href: pr.html_url, kind: "pull-request" }); });
   const referenceUncertainty = unclearOpenReferences.length ? `${unclearOpenReferences.length} open PR reference${unclearOpenReferences.length === 1 ? " was" : "s were"} found, but closing-keyword context did not establish that the PR implements this issue.` : "";
-  const statusDetail = blocked ? `A blocking label is currently applied: ${labels.filter((label) => BLOCKED_LABEL_PATTERN.test(label)).join(", ")}.` : issue.assignee ? `The issue is assigned to @${issue.assignee.login}.` : claimedByLabel ? `A visible work-state label is applied: ${labels.filter((label) => CLAIMED_LABEL_PATTERN.test(label)).join(", ")}.`
+  const statusDetail = blocked ? `A blocking label is currently applied: ${labels.filter((label) => BLOCKED_LABEL_PATTERN.test(label)).join(", ")}.` : assignee ? `The issue is assigned to @${assignee.login}.` : claimedByLabel ? `A visible work-state label is applied: ${labels.filter((label) => CLAIMED_LABEL_PATTERN.test(label)).join(", ")}.`
     : openImplementations.length ? `${openImplementations.length} open pull request${openImplementations.length === 1 ? " uses" : "s use"} a closing keyword for this issue.` : recentClaim ? `Possible claim language was found in a comment from @${recentClaim.user.login} within the last 30 days.`
       : closedUnmergedImplementations.length ? "A previously linked implementation PR closed without a visible merge. Confirm that the change is still wanted before restarting it." : referenceUncertainty || (status === "unknown" ? "Availability or assignment policy could not be fully verified; check the issue directly." : "No assignee, competing implementation PR, or recent claim was found in the fetched public evidence.");
   const availabilityLabel: string | undefined = status === "linked-pr" ? "Already in progress" : status === "possibly-claimed" ? "Possibly in progress" : status === "blocked" ? "Blocked" : status === "unknown" ? undefined
@@ -573,7 +574,7 @@ function selectCandidates(items: GitHubIssue[], tier: DiscoveryTier, limit: numb
     const labels = labelNames(issue.labels);
     return (!allowedRepositories || allowedRepositories.has(repository))
       && !issue.pull_request
-      && !issue.assignee
+      && !(issue.assignees?.length || issue.assignee)
       && !labels.some((label) => CLAIMED_LABEL_PATTERN.test(label) || BLOCKED_LABEL_PATTERN.test(label) || STALE_LABEL_PATTERN.test(label) || NOT_ACTIONABLE_LABEL_PATTERN.test(label));
   });
   const matchingCounts = new Map<string, number>();
