@@ -56,7 +56,7 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
       if (event.key === "Escape") onClose();
       if (event.key !== "Tab") return;
       const root = document.getElementById("repository-panel");
-      const nodes = root?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      const nodes = root?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), summary, [tabindex]:not([tabindex="-1"])');
       if (!nodes?.length) return;
       const firstNode = nodes[0];
       const lastNode = nodes[nodes.length - 1];
@@ -113,6 +113,10 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
               </GuidanceCard>
               <GuidanceCard title="What not to do" icon={ShieldAlert}><ul className="space-y-1.5">{(guidance?.avoid ?? [first.caution]).map((point) => <li key={point}>• {point}</li>)}</ul></GuidanceCard>
             </div>}
+            {state === "ready" && items.length > 0 && <details key={`${owner}/${repo}`} className="x-border mt-3 border-t">
+              <summary className="focus-ring x-text min-h-11 cursor-pointer rounded py-3 text-xs font-bold">Before you start</summary>
+              {guidance?.beforeStarting?.some((point) => point.trim()) ? <ul className="x-muted max-w-prose list-disc space-y-1.5 pb-3 pl-4 text-xs leading-5">{guidance.beforeStarting.filter((point) => point.trim()).map((point) => <li key={point}>{point}</li>)}</ul> : <p className="x-muted max-w-prose pb-3 text-xs leading-5">No preparation guidance was confirmed. Check the repository documentation for setup and testing instructions.</p>}
+            </details>}
             {!guidanceLoading && guidance?.source && <p className="x-muted mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px]"><span>{guidance.assignmentEvidence === "not-found" ? "Files checked" : "Guidance sources"}</span><span>·</span>{(guidance.sources?.length ? guidance.sources : [guidance.source]).map((source, index) => <span key={source.href} className="inline-flex items-center gap-1.5"><a href={source.href} target="_blank" rel="noreferrer" className="focus-ring underline underline-offset-2">{source.label}</a>{index < (guidance.sources?.length ?? 1) - 1 ? <span>·</span> : null}</span>)}<span>· checked {formatDate(guidance.checkedAt)}</span></p>}
           </section>
 
