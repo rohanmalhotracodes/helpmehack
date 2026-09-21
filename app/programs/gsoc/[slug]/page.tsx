@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: `${organization.name} GSoC history | HelpMeHack`,
     description: `See ${organization.name}'s Google Summer of Code participation years, projects, technologies, and code links.`,
-    alternates: { canonical: `https://helpmehack.tech/programs/gsoc/${organization.slug}` },
+    alternates: { canonical: `https://www.helpmehack.tech/programs/gsoc/${organization.slug}` },
   };
 }
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PolicyPage } from "@/components/policy-page";
 
-export const metadata: Metadata = { title: "Terms of use | HelpMeHack", description: "These terms describe how HelpMeHack works today. You can browse the Feed and repository directory without an account.", alternates: { canonical: "https://helpmehack.tech/terms" } };
+export const metadata: Metadata = { title: "Terms of use | HelpMeHack", description: "These terms describe how HelpMeHack works today. You can browse the Feed and repository directory without an account.", alternates: { canonical: "https://www.helpmehack.tech/terms" } };
 
 const sections = [
   { title: "Using repository guidance", content: <p>HelpMeHack helps you explore public projects and issues. Rankings and availability labels reflect collected evidence, which can be incomplete or outdated. Check the latest issue discussion before starting work. An issue listing does not reserve work or guarantee acceptance.</p> },

@@ -6,7 +6,7 @@ import { loadGsocOrganizations, summarizeProgramOrganization, summerOfBitcoin202
 export const metadata: Metadata = {
   title: "Open-source programs | HelpMeHack",
   description: "Browse GSoC organization history, participation years, past projects, technologies, and Summer of Bitcoin organizations.",
-  alternates: { canonical: "https://helpmehack.tech/programs" },
+  alternates: { canonical: "https://www.helpmehack.tech/programs" },
 };
 
 export default async function ProgramsPage() {
