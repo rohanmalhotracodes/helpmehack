@@ -37,6 +37,66 @@ export type ProgramOrganizationSummary = Omit<ProgramOrganization, "years"> & {
   years: Array<Pick<ProgramYear, "year" | "programUrl" | "projectCount">>;
 };
 
+export type SummerOfBitcoinYearArchive = {
+  year: number;
+  title: string;
+  summary: string;
+  officialUrl: string;
+  contributors?: number;
+  organizationCount?: number;
+  projectCount?: number;
+};
+
+export const summerOfBitcoinYearArchives: SummerOfBitcoinYearArchive[] = [
+  {
+    year: 2026,
+    title: "Summer of Bitcoin 2026",
+    summary: "50 contributors were selected across 26 open-source Bitcoin organizations.",
+    officialUrl: "https://blog.summerofbitcoin.org/summer-of-bitcoin-2026-announcing-the-next-generation-of-bitcoin-builders/",
+    contributors: 50,
+    organizationCount: 26,
+  },
+  {
+    year: 2025,
+    title: "Summer of Bitcoin 2025",
+    summary: "68 contributors were selected across 33 open-source Bitcoin organizations.",
+    officialUrl: "https://www.summerofbitcoin.org/2025-accepted-projects",
+    contributors: 68,
+    organizationCount: 33,
+  },
+  {
+    year: 2024,
+    title: "Summer of Bitcoin 2024",
+    summary: "52 contributors were selected for the fourth Summer of Bitcoin cohort.",
+    officialUrl: "https://www.summerofbitcoin.org/program-details/2024/r/rectcEvzVdwHh7gwb",
+    contributors: 52,
+  },
+  {
+    year: 2023,
+    title: "Summer of Bitcoin 2023",
+    summary: "45 contributors worked with 24 open-source Bitcoin and Lightning organizations.",
+    officialUrl: "https://www.summerofbitcoin.org/program-details/2023/r/reckGTBbHuT6Amdhk",
+    contributors: 45,
+    organizationCount: 24,
+  },
+  {
+    year: 2022,
+    title: "Summer of Bitcoin 2022",
+    summary: "83 contributors were selected across 29 open-source Bitcoin projects.",
+    officialUrl: "https://www.summerofbitcoin.org/program-details/2022/r/recPLKAWw1UFZb7Sl",
+    contributors: 83,
+    projectCount: 29,
+  },
+  {
+    year: 2021,
+    title: "Summer of Bitcoin 2021",
+    summary: "The pilot cohort selected 51 students and paired them with 40 mentors across 22 open-source Bitcoin and Lightning projects.",
+    officialUrl: "https://blog.summerofbitcoin.org/summer-of-bitcoin-liftoff/",
+    contributors: 51,
+    projectCount: 22,
+  },
+];
+
 type GsocRawProject = {
   title?: string;
   short_description?: string;
