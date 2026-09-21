@@ -17,7 +17,10 @@ export function RepositoryFeedback({ repository }: { repository: string }) {
   const [failed, setFailed] = useState(false);
   const sending = useRef(false);
 
-  if (sent) return <p role="status" className="x-muted px-4 py-4 text-xs sm:px-6">Thanks for your feedback.</p>;
+  const reportUrl = `mailto:helpmehack@mail.tin.computer?subject=${encodeURIComponent(`HelpMeHack problem: ${repository}`)}&body=${encodeURIComponent(`Repository: ${repository}\n\nWhat were you trying to do?\n\nWhat went wrong?\n\nPlease remove any private information before sending.`)}`;
+  const reportLink = <p className="x-muted mt-2 text-xs"><a className="focus-ring inline-flex min-h-11 items-center underline underline-offset-4" href={reportUrl}>Report a problem by email</a><span className="block">Opens your email app. Include what you tried and what went wrong.</span></p>;
+
+  if (sent) return <div className="px-4 py-4 sm:px-6"><p role="status" className="x-muted text-xs">Thanks for your feedback.</p>{reportLink}</div>;
   return <form className="ph-no-capture x-border border-t px-4 py-4 sm:px-6" aria-label="Repository feedback" onSubmit={(event) => {
     event.preventDefault();
     if (helpful === null || sending.current || alreadySent(repository)) return;
@@ -39,5 +42,6 @@ export function RepositoryFeedback({ repository }: { repository: string }) {
       <div className="mt-2 flex items-center justify-between gap-3"><span className="x-muted text-[11px]">{comment.length}/300 · Sent to HelpMeHack via PostHog</span><button type="submit" className="focus-ring x-border x-text min-h-11 shrink-0 rounded-full border px-4 text-xs font-semibold hover:bg-[var(--surface-raised)]">Send feedback</button></div>
       {failed && <p role="status" className="x-muted mt-2 text-xs">Feedback is unavailable. You can keep browsing.</p>}
     </div>}
+    {reportLink}
   </form>;
 }
