@@ -22,6 +22,7 @@ export function SiteFooter({ onNavigate }: { onNavigate?: (view: "overlooked" | 
           <a href="https://docs.github.com/en/rest" target="_blank" rel="noreferrer" className={linkClass}>GitHub data</a>
           <a href="https://github.com/rohanmalhotracodes/helpmehack" target="_blank" rel="noreferrer" className={linkClass}>Source code</a>
           <Link href="/about" className={linkClass}>About</Link>
+          <a href="mailto:helpmehack@mail.tin.computer" className={linkClass}>Contact support</a>
           <Link href="/terms" className={linkClass}>Terms</Link>
           <Link href="/privacy" className={linkClass}>Privacy</Link>
         </nav>
