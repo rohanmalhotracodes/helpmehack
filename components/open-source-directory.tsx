@@ -20,7 +20,8 @@ type RankedRepository = {
 
 type RepositorySort = "recommended" | "recent" | "adoption";
 
-export function OpenSourceDirectory({ records, savedRepositoryIds, savedIssueIds, onSaveRepository, onOpenRepository }: {
+export function OpenSourceDirectory({ records, savedRepositoryIds, savedIssueIds, onSaveRepository, onOpenRepository, dataNotice }: {
+  dataNotice?: string;
   records: OpenSourceOpportunity[];
   savedRepositoryIds: string[];
   savedIssueIds: string[];
@@ -65,6 +66,7 @@ export function OpenSourceDirectory({ records, savedRepositoryIds, savedIssueIds
     <main id="main-content" className="mx-auto w-full max-w-[1240px] px-3 py-6 sm:px-5 sm:py-8">
       <header>
         <h1 className="x-text text-2xl font-bold tracking-tight sm:text-3xl">Open source worth starting.</h1>
+        {dataNotice && <p role="status" className="x-muted mt-3 max-w-2xl text-sm leading-6">{dataNotice}</p>}
       </header>
 
       <section className="mt-5" aria-label="Search and filter open-source repositories">
