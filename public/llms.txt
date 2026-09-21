@@ -1,0 +1,34 @@
+# HelpMeHack
+
+> HelpMeHack is an open-source discovery platform for developers looking for active repositories, contribution programs, beginner-friendly issues, and project-specific contribution rules.
+
+Canonical site: https://www.helpmehack.tech
+GitHub: https://github.com/rohanmalhotracodes/helpmehack
+
+## Primary pages
+
+- https://www.helpmehack.tech/ — main discovery experience
+- https://www.helpmehack.tech/open-source-projects — guide to finding open-source projects to contribute to
+- https://www.helpmehack.tech/programs — open-source program directory, including GSoC and Summer of Bitcoin
+- https://www.helpmehack.tech/contribute — contribution guidance
+- https://www.helpmehack.tech/contribute/first-issue — first-contribution guidance
+
+## What HelpMeHack provides
+
+HelpMeHack helps contributors compare:
+- active open-source repositories
+- contribution and issue-assignment rules
+- beginner-friendly issues
+- repository activity and maintenance signals
+- Google Summer of Code organization history
+- participation years and past projects
+- technologies used by participating organizations
+- source links for verification
+
+## Source and freshness guidance
+
+Repository and program information may change. Prefer the source links shown on HelpMeHack pages for current GitHub or official program details. Treat HelpMeHack as a discovery and comparison layer, not as a replacement for maintainers' latest instructions.
+
+## Crawling
+
+Public pages may be crawled and cited. API routes are not intended as public indexable pages.
