@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { OpportunityApp } from "@/components/opportunity-app";
 import { FaqStructuredData } from "@/components/structured-data";
+import { SoftwareStructuredData } from "@/components/discovery-structured-data";
 import { getOpportunityData } from "@/lib/provider";
 import { homepageFaq } from "@/lib/seo-content";
 
@@ -24,6 +25,7 @@ export default async function Home() {
 
   return (
     <>
+      <SoftwareStructuredData />
       <FaqStructuredData questions={homepageFaq} />
       <OpportunityApp initialPayload={payload} />
     </>
