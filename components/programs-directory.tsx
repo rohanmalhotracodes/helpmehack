@@ -197,7 +197,7 @@ export function ProgramsDirectory({
                 {organization.technologies.slice(0, 5).map((item) => <span key={item} className="x-border x-text rounded-full border px-2.5 py-1 text-[10px] font-semibold">{item}</span>)}
               </div>
 
-              {organization.latestRepositories.length > 0 && (
+              {program === "summer-of-bitcoin" && organization.latestRepositories.length > 0 && (
                 <div className="mt-5 space-y-2">
                   {organization.latestRepositories.slice(0, 2).map((repository) => (
                     <a key={repository.url} href={repository.url} target="_blank" rel="noreferrer" className="focus-ring x-border x-text flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold hover:bg-[var(--surface-raised)]">
