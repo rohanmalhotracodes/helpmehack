@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import { ContributionPageShell } from "@/components/contribution-page-shell";
+import { ComparisonStructuredData } from "@/components/discovery-structured-data";
 
 const title = "HelpMeHack vs Up For Grabs: Choose where to contribute";
 const description = "Up For Grabs connects contributors to projects with labeled starter tasks. HelpMeHack brings repository fit, contribution guidance, and issue checks into your selection process.";
@@ -10,6 +11,7 @@ export const metadata: Metadata = { title, description, alternates: { canonical:
 const rows = [{"title": "Choose a project", "ours": "Search repositories, filter technologies, and explore groups for different experience levels.", "theirs": "Explore project descriptions and technology tags, then follow a project\u2019s task-list link."}, {"title": "Assess a task", "ours": "See availability signals from assignments, comments, labels, and linked pull requests.", "theirs": "Maintainer guidance asks for small, independent tasks with descriptions and implementation pointers."}, {"title": "Plan your start", "ours": "Read assignment guidance and preparation notes with sources in repository details.", "theirs": "The suggested workflow is to read guidelines, run the project, and message the task."}];
 export default function ComparisonPage() {
   return <ContributionPageShell>
+    <ComparisonStructuredData title={title} description={description} url={url} />
     <main className="mx-auto max-w-[1000px] px-5 pb-4 pt-12 sm:px-8 sm:pt-20">
       <section className="max-w-[760px]" aria-labelledby="comparison-title">
         <h1 id="comparison-title" className="text-balance text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">HelpMeHack vs Up For Grabs</h1>

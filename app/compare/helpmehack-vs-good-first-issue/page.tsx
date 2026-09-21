@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import { ContributionPageShell } from "@/components/contribution-page-shell";
+import { ComparisonStructuredData } from "@/components/discovery-structured-data";
 
 const title = "HelpMeHack vs Good First Issue: Choose where to contribute";
 const description = "Good First Issue curates beginner issues by language. HelpMeHack helps you inspect project fit, contribution rules, and issue availability before moving to GitHub.";
@@ -10,6 +11,7 @@ export const metadata: Metadata = { title, description, alternates: { canonical:
 const rows = [{"title": "Find a fit", "ours": "Filter technologies and compare experience groups, with saved repositories in your browser.", "theirs": "Browse curated projects by language, with issue links and recent activity ages."}, {"title": "Check the work", "ours": "Review availability signals from assignees, comments, labels, and linked pull requests.", "theirs": "Find issues with beginner-friendly labels in projects selected for newcomer contributions."}, {"title": "Prepare to contribute", "ours": "Open repository details for assignment guidance, preparation notes, and their sources.", "theirs": "Project admission requires setup instructions, contribution guidelines, and recent activity."}];
 export default function ComparisonPage() {
   return <ContributionPageShell>
+    <ComparisonStructuredData title={title} description={description} url={url} />
     <main className="mx-auto max-w-[1000px] px-5 pb-4 pt-12 sm:px-8 sm:pt-20">
       <section className="max-w-[760px]" aria-labelledby="comparison-title">
         <h1 id="comparison-title" className="text-balance text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">HelpMeHack vs Good First Issue</h1>
