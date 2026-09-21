@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isHumanMaintainerEvent, scoreIssue, scoreRepository, type PullObservation } from "./ranking";
+import { isHumanMaintainerEvent, passesRepositoryQualityGate, scoreIssue, scoreRepository, type PullObservation } from "./ranking";
 
 const checkedAt = "2026-09-12T00:00:00.000Z";
 
@@ -31,6 +31,61 @@ describe("repository quality scoring", () => {
     expect(quality.score).toBeNull();
     expect(quality.coverage).toBe(45);
     expect(quality.label).toBe("Insufficient quality evidence");
+  });
+
+
+  it("requires meaningful maintenance and onboarding for auto-discovered repositories", () => {
+    const healthy = scoreRepository({
+      checkedAt,
+      stars: 2_000,
+      forks: 300,
+      pushedAt: "2026-09-10T00:00:00.000Z",
+      latestReleaseAt: null,
+      recentPulls: [pull()],
+      hasContributionGuide: true,
+      hasSetupInstructions: true,
+      hasTestInstructions: false,
+      hasBeginnerIssues: true,
+    });
+    expect(healthy.score).toBeNull();
+    expect(passesRepositoryQualityGate(healthy)).toBe(true);
+
+    const poorlyDocumented = scoreRepository({
+      checkedAt,
+      stars: 20_000,
+      forks: 3_000,
+      pushedAt: "2026-09-10T00:00:00.000Z",
+      latestReleaseAt: null,
+      recentPulls: [pull()],
+      hasContributionGuide: true,
+      hasSetupInstructions: false,
+      hasTestInstructions: false,
+      hasBeginnerIssues: false,
+    });
+    expect(passesRepositoryQualityGate(poorlyDocumented)).toBe(false);
+  });
+
+  it("rejects fully measured repositories with weak contributor experience", () => {
+    const weak = scoreRepository({
+      checkedAt,
+      stars: 10,
+      forks: 2,
+      pushedAt: "2026-09-10T00:00:00.000Z",
+      latestReleaseAt: null,
+      recentPulls: [
+        pull({ merged: false, responded: false, firstResponseHours: undefined }),
+        pull({ createdAt: "2026-08-15T00:00:00.000Z", merged: false, responded: false, firstResponseHours: undefined }),
+        pull({ newcomer: false, merged: false, responded: false, firstResponseHours: undefined }),
+      ],
+      hasContributionGuide: true,
+      hasSetupInstructions: true,
+      hasTestInstructions: true,
+      hasBeginnerIssues: true,
+    });
+    expect(weak.coverage).toBe(100);
+    expect(weak.score).not.toBeNull();
+    expect(weak.score!).toBeLessThan(45);
+    expect(passesRepositoryQualityGate(weak)).toBe(false);
   });
 
   it("caps fame and uses the documented 60/25/15 issue formula", () => {
