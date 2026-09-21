@@ -34,6 +34,18 @@ export function mergeRepositorySeeds(current: IndexedRepository[], incoming: Rep
   return [...merged.values()];
 }
 
+export function reconcileRepositoryUniverse(current: IndexedRepository[], discovered: RepositoryDiscoverySeed[], target: number) {
+  const previous = new Map(current.map((entry) => [entry.fullName.toLowerCase(), entry]));
+  return discovered.slice(0, target).map((seed) => {
+    const existing = previous.get(seed.fullName.toLowerCase());
+    return {
+      ...existing,
+      fullName: existing?.fullName ?? seed.fullName,
+      tiers: [...new Set([...(existing?.tiers ?? []), ...seed.tiers])],
+    };
+  });
+}
+
 export function replaceRepositoryRecords(current: OpenSourceOpportunity[], repository: string, incoming: OpenSourceOpportunity[]) {
   const key = repository.toLowerCase();
   return [...current.filter((record) => `${record.owner}/${record.repo}`.toLowerCase() !== key), ...incoming];
@@ -94,7 +106,7 @@ export async function refreshOpportunityIndex(options: { batchSizeOverride?: num
   if (!state.lastDiscoveryAt || Date.now() - Date.parse(state.lastDiscoveryAt) >= dayMs || state.repositories.length < Math.min(100, target)) {
     try {
       const discovered = await discoverRepositoryUniverse(false, target);
-      state.repositories = mergeRepositorySeeds(state.repositories, discovered).slice(0, target);
+      state.repositories = reconcileRepositoryUniverse(state.repositories, discovered, target);
       state.lastDiscoveryAt = startedAt;
       discoveryChanged = true;
     } catch (error) {
