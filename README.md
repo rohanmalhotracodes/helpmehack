@@ -1,6 +1,6 @@
 # helpmehack
 
-A focused contribution browser with two destinations: **Overlooked**, a read-only HelpMeHack editorial feed, and **Open Source**, an evidence-ranked repository directory with currently startable issues. No account, resume, or onboarding is required.
+A focused contribution browser with two destinations: **Feed**, a read-only HelpMeHack editorial feed, and **Repos**, an evidence-ranked repository directory with currently startable issues. No account, resume, or onboarding is required.
 
 ## Run locally
 
@@ -69,7 +69,7 @@ Attach an Amplify SSR compute IAM role that allows the application to query and 
 
 For unattended indexing, set `REFRESH_SECRET` on the deployed site, then add `HELPMEHACK_URL` and the same `REFRESH_SECRET` as GitHub repository secrets. The included GitHub Actions workflow calls the protected index worker at minute 17 of every hour and can also be run manually.
 
-The worker refreshes the discovery universe daily, targeting 500 repositories by default. It combines the reviewed catalog with active GitHub repositories carrying `good-first-issue`, `help-wanted`, or `hacktoberfest` topics. An automatically discovered project must still have at least 100 stars, 10 forks, six months of history, recent maintenance evidence, contribution documentation, and a genuinely open contribution-labelled issue. Each hourly run enriches at least 24 least-recently checked repositories, temporarily increasing to 30 while the live index has fewer than 60 available repositories, retains successful older snapshots when a request fails, and removes a repository's old card when a successful check finds no eligible issue. Visitor requests read the stored DynamoDB snapshot immediately; opening a card still performs a current, deeper issue check.
+The worker refreshes the discovery universe daily, targeting 500 repositories by default. It combines the reviewed catalog with active GitHub repositories carrying `good-first-issue` or `help-wanted` topics. An automatically discovered project must still have at least 100 stars, 10 forks, six months of history, recent maintenance evidence, contribution documentation, and a genuinely open contribution-labelled issue. Each hourly run enriches at least 24 least-recently checked repositories, temporarily increasing to 30 while the live index has fewer than 60 available repositories, retains successful older snapshots when a request fails, and removes a repository's old card when a successful check finds no eligible issue. Visitor requests read the stored DynamoDB snapshot immediately; opening a card still performs a current, deeper issue check.
 
 Without DynamoDB configuration, the application retains its live GitHub fallback and an in-process cache, but that fallback is not durable across server instances or deployments.
 
@@ -85,7 +85,7 @@ Deploy from the AWS Amplify console:
 1. Choose **Create new app**.
 2. Connect GitHub.
 3. Select `rohanmalhotracodes/helpmehack`.
-4. Select the `aws-amplify` branch for the first deployment.
+4. Select the `main` branch for deployment.
 5. Allow Amplify to create the required service role.
 6. Review the detected build settings and deploy.
 7. Add any required environment variables under the Amplify app settings, then redeploy.
