@@ -38,6 +38,25 @@ describe("persistent opportunity index", () => {
     });
   });
 
+
+  it("keeps the active universe bounded when discovery rotates", () => {
+    const current = [
+      { fullName: "old/one", tiers: ["moderate"] as const },
+      { fullName: "old/two", tiers: ["beginner"] as const },
+    ];
+    const next = reconcileRepositoryUniverse(current, [
+      { fullName: "new/repo", tiers: ["moderate"] },
+      { fullName: "old/two", tiers: ["beginner"] },
+    ], 2);
+    const activeKeys = new Set(next.map((entry) => entry.fullName.toLowerCase()));
+    const records = [
+      { id: "stale", owner: "old", repo: "one", category: "open-source" },
+      { id: "keep", owner: "old", repo: "two", category: "open-source" },
+    ] as OpenSourceOpportunity[];
+
+    expect(records.filter((record) => activeKeys.has(`${record.owner}/${record.repo}`.toLowerCase())).map((record) => record.id)).toEqual(["keep"]);
+  });
+
   it("replaces one repository snapshot without removing other repositories", () => {
     const record = (id: string, owner: string, repo: string) => ({ id, owner, repo, category: "open-source" }) as OpenSourceOpportunity;
     const result = replaceRepositoryRecords(
