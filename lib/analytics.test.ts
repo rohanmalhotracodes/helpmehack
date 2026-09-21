@@ -36,7 +36,7 @@ describe("product analytics", () => {
     expect(config.session_recording?.maskCapturedNetworkRequestFn?.({ name: "https://example.com/?secret=yes", method: "POST" } as never)).toBeNull();
     const sanitize = config.before_send as (event: unknown) => { properties: Record<string, string> };
     const result = sanitize({ properties: { $current_url: "https://www.helpmehack.tech/?email=private#token", $referrer: "https://example.com/?secret=yes" } });
-    expect(result.properties).toEqual({ $current_url: "https://www.helpmehack.tech/", $referrer: "https://example.com/", is_test_traffic: false, referral_domain: "unknown" });
+    expect(result.properties).toEqual({ $current_url: "https://www.helpmehack.tech/", $referrer: "https://example.com/", is_test_traffic: false, referral_domain: "direct", referrer_channel: "direct", referrer_attribution_version: 1 });
   });
 
   it("tracks the chosen Amplify host and labels test traffic without search terms", async () => {
@@ -54,8 +54,33 @@ describe("product analytics", () => {
     const config = vi.mocked(posthog.init).mock.calls[0][1]!;
     const sanitize = config.before_send as (event: unknown) => { properties: Record<string, unknown> };
     expect(sanitize({ properties: { ph_keyword: "private", $current_url: "https://main.d27aveplt50hl3.amplifyapp.com/?email=private#secret" } }).properties)
-      .toEqual({ $current_url: "https://main.d27aveplt50hl3.amplifyapp.com/", is_test_traffic: true, referral_domain: "www.google.com" });
+      .toEqual({ $current_url: "https://main.d27aveplt50hl3.amplifyapp.com/", is_test_traffic: true, referral_domain: "www.google.com", referrer_channel: "search", referrer_attribution_version: 1 });
     expect(storage.get("helpmehack:referral-domain")).toBe("www.google.com");
+  });
+
+  it("keeps the AI entry channel across routes and on both event types", async () => {
+    const storage = new Map<string, string>([["helpmehack:referrer-channel:v1", "ai"], ["helpmehack:analytics-test", "true"]]);
+    vi.stubGlobal("window", {
+      location: { hostname: "main.d27aveplt50hl3.amplifyapp.com", search: "" },
+      sessionStorage: { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => storage.set(key, value) },
+    });
+    vi.stubGlobal("document", { referrer: "https://main.d27aveplt50hl3.amplifyapp.com/contribute" });
+    const { initAnalytics } = await import("./analytics");
+    initAnalytics();
+    const sanitize = vi.mocked(posthog.init).mock.calls[0][1]!.before_send as (event: unknown) => { properties: Record<string, unknown> };
+    for (const event of ["$pageview", "contribution_issue_clicked"]) {
+      expect(sanitize({ event, properties: {} }).properties).toMatchObject({ referrer_channel: "ai", is_test_traffic: true });
+    }
+  });
+
+  it("classifies AI referrals even when session storage is blocked", async () => {
+    vi.stubGlobal("window", { location: { hostname: "main.d27aveplt50hl3.amplifyapp.com", search: "" },
+      sessionStorage: { getItem: () => { throw new Error("blocked"); } } });
+    vi.stubGlobal("document", { referrer: "https://claude.ai/private" });
+    const { initAnalytics } = await import("./analytics");
+    initAnalytics();
+    const sanitize = vi.mocked(posthog.init).mock.calls[0][1]!.before_send as (event: unknown) => { properties: Record<string, unknown> };
+    expect(sanitize({ properties: {} }).properties.referrer_channel).toBe("ai");
   });
 
   it("does not break product actions if analytics throws", async () => {
