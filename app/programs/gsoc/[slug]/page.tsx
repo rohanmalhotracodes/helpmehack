@@ -21,8 +21,41 @@ export default async function GsocOrganizationPage({ params }: { params: Promise
   const organization = await loadGsocOrganization(slug);
   if (!organization) notFound();
 
+  const pageUrl = `https://www.helpmehack.tech/programs/gsoc/${organization.slug}`;
+  const structuredData = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "@id": `${pageUrl}#page`,
+      url: pageUrl,
+      name: `${organization.name} GSoC history`,
+      description: organization.description,
+      about: {
+        "@type": "Organization",
+        name: organization.name,
+        url: organization.websiteUrl || undefined,
+      },
+      keywords: organization.technologies,
+      isPartOf: {
+        "@type": "WebSite",
+        name: "HelpMeHack",
+        url: "https://www.helpmehack.tech",
+      },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "HelpMeHack", item: "https://www.helpmehack.tech" },
+        { "@type": "ListItem", position: 2, name: "Programs", item: "https://www.helpmehack.tech/programs" },
+        { "@type": "ListItem", position: 3, name: organization.name, item: pageUrl },
+      ],
+    },
+  ];
+
   return (
     <ContributionPageShell>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <main className="mx-auto w-full max-w-[1040px] px-4 py-8 sm:px-6 sm:py-12">
         <Link href="/programs" className="focus-ring x-muted inline-flex items-center gap-2 rounded text-sm font-semibold hover:text-[var(--text)]">
           <ArrowLeft size={16} /> Back to Programs
