@@ -110,6 +110,23 @@ export function scoreRepository(evidence: RepositoryEvidence): RepositoryQuality
   return { score, coverage, label: repositoryLabel(score, factors), windowDays: WINDOW_DAYS, checkedAt: evidence.checkedAt, stars: evidence.stars, factors };
 }
 
+
+export function passesRepositoryQualityGate(quality: RepositoryQuality) {
+  const maintenance = quality.factors.find((factor) => factor.key === "maintenance")?.earned;
+  const onboarding = quality.factors.find((factor) => factor.key === "onboarding")?.earned;
+
+  // Auto-discovered repositories need both current maintenance and enough
+  // contributor documentation to make an issue realistically startable.
+  if (maintenance == null || maintenance < 3) return false;
+  if (onboarding == null || onboarding < 5) return false;
+
+  // When behavioral evidence is complete, reject repositories whose measured
+  // contributor experience is weak. Sparse evidence is not treated as failure;
+  // the concrete maintenance/onboarding gates above still apply.
+  if (quality.score !== null && quality.score < 45) return false;
+  return true;
+}
+
 export function scoreIssue(input: { body: string | null; title: string; labels: string[]; language: string | null; onboardingPoints: number; hasMaintainerDirection: boolean; blocked: boolean; repositoryScore: number | null }) {
   const body = input.body ?? "";
   const beginnerSuitability = Math.min(100,
