@@ -2,9 +2,12 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import { ContributionPageShell } from "@/components/contribution-page-shell";
+import { SeoFaq } from "@/components/seo-faq";
+import { FaqStructuredData } from "@/components/structured-data";
+import { contributeFaq } from "@/lib/seo-content";
 
-const title = "Ways to contribute to open source | HelpMeHack";
-const description = "Explore four ways to contribute to open source: documentation, bug reports, code fixes, and testing. Choose a contribution that fits your skills.";
+const title = "How to contribute to open source | HelpMeHack";
+const description = "Learn how to contribute to open source through documentation, bug reports, code fixes, and testing. Check project rules and issue status before starting.";
 const url = "https://www.helpmehack.tech/contribute";
 
 export const metadata: Metadata = {
@@ -40,10 +43,12 @@ const topics = [
 export default function ContributePage() {
   return (
     <ContributionPageShell>
+      <FaqStructuredData questions={contributeFaq} />
       <main className="mx-auto max-w-[1000px] px-5 pb-4 pt-12 sm:px-8 sm:pt-20">
         <section aria-labelledby="contribute-title" className="max-w-[760px]">
-          <h1 id="contribute-title" className="text-balance text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">Ways to contribute to open source</h1>
-          <p className="x-muted mt-6 max-w-[60ch] text-pretty text-lg leading-7">Code is one way to help. Start with a contribution that fits your skills, then follow the project&apos;s process.</p>
+          <p className="x-muted text-xs font-semibold uppercase tracking-[.14em]">Open-source contribution guide</p>
+          <h1 id="contribute-title" className="mt-3 text-balance text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">Ways to contribute to open source</h1>
+          <p className="x-muted mt-6 max-w-[60ch] text-pretty text-lg leading-7">Code is one way to help. Start with a contribution that fits your skills, then follow the project's process and verify that the work is still useful before you begin.</p>
           <Link href="/#open-source" className="focus-ring x-primary mt-8 inline-flex min-h-12 items-center gap-3 rounded-full px-6 py-3 text-sm font-bold transition-opacity hover:opacity-85 active:opacity-75">Browse open source projects <ArrowRight size={18} aria-hidden="true" /></Link>
         </section>
         <div className="mt-12 sm:mt-16">
@@ -55,7 +60,22 @@ export default function ContributePage() {
             </section>
           ))}
         </div>
-        <nav aria-label="Next step" className="x-border flex flex-wrap gap-x-6 border-t pt-6">
+
+        <section aria-labelledby="workflow-title" className="x-border border-t py-8">
+          <h2 id="workflow-title" className="text-2xl font-bold tracking-tight">A simple contribution workflow</h2>
+          <p className="x-muted mt-3 max-w-[66ch] text-base leading-7">
+            Find a maintained project, read its contribution guide, reproduce the problem or need, check whether the work is already claimed, confirm the scope, make one focused change, run the project's checks, and explain what you changed in the pull request.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold">
+            <Link href="/open-source-projects" className="focus-ring rounded underline underline-offset-4">Find a project</Link>
+            <Link href="/contribute/first-issue" className="focus-ring rounded underline underline-offset-4">Choose a good first issue</Link>
+            <Link href="/programs" className="focus-ring rounded underline underline-offset-4">Explore contribution programs</Link>
+          </div>
+        </section>
+
+        <SeoFaq questions={contributeFaq} className="mt-4" />
+
+        <nav aria-label="Next step" className="x-border mt-10 flex flex-wrap gap-x-6 border-t pt-6">
           <Link href="/open-source-projects" className="focus-ring inline-flex min-h-11 items-center gap-2 rounded text-sm font-semibold underline underline-offset-4">Find a project <ArrowRight size={16} aria-hidden="true" /></Link>
           <Link href="/contribute/first-issue" className="focus-ring inline-flex min-h-11 items-center gap-2 rounded text-sm font-semibold underline underline-offset-4">Choose a good first issue <ArrowRight size={16} aria-hidden="true" /></Link>
         </nav>
