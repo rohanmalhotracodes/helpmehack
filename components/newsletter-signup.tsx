@@ -38,7 +38,7 @@ export function NewsletterSignup() {
       const body = await response.json() as { message?: string; error?: string };
       if (!response.ok) throw new Error(body.error ?? "Subscription failed. Please try again.");
       setState("success");
-      setMessage(body.message ?? "You’re subscribed.");
+      setMessage(body.message ?? "Your signup request was accepted.");
       formElement.reset();
     } catch (error) {
       setState("error");
