@@ -74,21 +74,15 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
   );
 }
 
-function SiteFooter({ onNavigate }: { onNavigate: (view: View) => void }) {
+function SiteFooter({ onNavigate: _onNavigate }: { onNavigate: (view: View) => void }) {
   const linkClass = "focus-ring rounded px-1 py-1 font-medium transition-colors hover:text-[var(--text)]";
   return (
     <footer className="x-border mt-12 border-t" aria-label="Site footer">
-      <div className="x-muted mx-auto flex max-w-[1240px] flex-col items-center gap-4 px-5 py-7 text-xs sm:flex-row sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Image src="/helpmehack-mark.png" width={24} height={24} alt="" className="logo-mark h-6 w-6 rounded-md" />
-          <p>© 2026 HelpMeHack</p>
-        </div>
-        <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2" aria-label="Footer navigation">
-          <button type="button" onClick={() => onNavigate("overlooked")} className={linkClass}>Overlooked</button>
-          <button type="button" onClick={() => onNavigate("open-source")} className={linkClass}>Open Source</button>
-          <a href="https://opensource.guide/how-to-contribute/" target="_blank" rel="noreferrer" className={linkClass}>Contributor guide</a>
-          <a href="https://docs.github.com/en/rest" target="_blank" rel="noreferrer" className={linkClass}>GitHub data</a>
-          <a href="https://github.com/rohanmalhotracodes/helpmehack" target="_blank" rel="noreferrer" className={linkClass}>Source code</a>
+      <div className="x-muted mx-auto flex max-w-[1240px] flex-col gap-3 px-5 py-6 text-xs sm:flex-row sm:items-center sm:justify-between">
+        <p>© 2026 HelpMeHack</p>
+        <nav className="flex flex-wrap items-center gap-x-4 gap-y-2" aria-label="Footer navigation">
+          <a href="https://github.com/rohanmalhotracodes/helpmehack" target="_blank" rel="noreferrer" className={linkClass}>GitHub</a>
+          <a href="mailto:helpmehack@mail.tin.computer" className={linkClass}>Contact</a>
         </nav>
       </div>
     </footer>
