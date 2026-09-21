@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ContributionPageShell } from "@/components/contribution-page-shell";
 import { ProgramsDirectory } from "@/components/programs-directory";
-import { loadGsocOrganizations, summarizeProgramOrganization, summerOfBitcoin2026Organizations } from "@/lib/program-directory";
+import { loadGsocOrganizations, summarizeProgramOrganization, summerOfBitcoin2026Organizations, summerOfBitcoinYearArchives } from "@/lib/program-directory";
 
 export const metadata: Metadata = {
   title: "Open-source programs | HelpMeHack",
@@ -15,7 +15,7 @@ export default async function ProgramsPage() {
 
   return (
     <ContributionPageShell>
-      <ProgramsDirectory gsoc={gsoc} summerOfBitcoin={summerOfBitcoin} />
+      <ProgramsDirectory gsoc={gsoc} summerOfBitcoin={summerOfBitcoin} summerOfBitcoinYears={summerOfBitcoinYearArchives} />
     </ContributionPageShell>
   );
 }
