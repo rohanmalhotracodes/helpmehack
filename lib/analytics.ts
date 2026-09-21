@@ -19,10 +19,36 @@ export function initAnalytics() {
       api_host: "https://us.i.posthog.com",
       capture_pageview: "history_change",
       capture_pageleave: false,
-      autocapture: false,
-      disable_session_recording: true,
+      autocapture: { dom_event_allowlist: ["click"] },
+      mask_all_text: true,
+      mask_all_element_attributes: true,
+      rageclick: true,
+      capture_dead_clicks: true,
+      disable_session_recording: false,
+      session_recording: {
+        maskAllInputs: true,
+        blockSelector: ".ph-no-capture, input[type=hidden], input[type=file]",
+        maskTextSelector: "[data-private]",
+        recordHeaders: false,
+        recordBody: false,
+        maskCapturedNetworkRequestFn: (request) => {
+          // Replay metadata needs a page URL, but never its query or fragment.
+          if (request.method) return null;
+          try { const url = new URL(request.name); return { ...request, name: url.origin + url.pathname }; }
+          catch { return null; }
+        },
+        maskAttributeFn: (name, value) => {
+          if (name === "value") return "***";
+          if (["href", "src", "action"].includes(name)) {
+            try { const url = new URL(value, window.location.origin); return url.origin + url.pathname; }
+            catch { return ""; }
+          }
+          return value;
+        },
+      },
+      enable_recording_console_log: false,
       disable_surveys: true,
-      disable_external_dependency_loading: true,
+      disable_external_dependency_loading: false,
       advanced_disable_feature_flags: true,
       person_profiles: "never",
       persistence: "sessionStorage",
@@ -62,13 +88,15 @@ export function initAnalytics() {
   }
 }
 
-type FunnelEvent = "app_viewed" | "repository_opened" | "contribution_issue_clicked";
-type FunnelProperties = { view?: "home" | "overlooked" | "open-source"; repository?: string; issue_number?: number };
+type FunnelEvent = "app_viewed" | "repository_opened" | "contribution_issue_clicked" | "repository_clicked" | "feed_to_repos_clicked" | "product_error" | "empty_results" | "feedback_submitted";
+type FunnelProperties = { view?: "home" | "overlooked" | "open-source"; repository?: string; issue_number?: number; surface?: "directory" | "repository_panel"; has_query?: boolean; has_filter?: boolean; helpful?: boolean; comment?: string };
 
 export function trackFunnel(event: FunnelEvent, properties: FunnelProperties) {
   try {
-    if (initAnalytics()) posthog.capture(event, properties);
+    if (!initAnalytics() || posthog.has_opted_out_capturing()) return false;
+    return Boolean(posthog.capture(event, properties));
   } catch {
     // The product remains usable if analytics is blocked or unavailable.
+    return false;
   }
 }

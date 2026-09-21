@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import posthog from "posthog-js";
 
-vi.mock("posthog-js", () => ({ default: { init: vi.fn(), capture: vi.fn() } }));
+vi.mock("posthog-js", () => ({ default: { init: vi.fn(), capture: vi.fn(), has_opted_out_capturing: vi.fn() } }));
 
 beforeEach(() => { vi.resetModules(); vi.resetAllMocks(); });
 afterEach(() => { vi.unstubAllGlobals(); });
@@ -27,7 +27,13 @@ describe("product analytics", () => {
     expect(posthog.init).toHaveBeenCalledTimes(1);
     expect(posthog.capture).toHaveBeenCalledTimes(3);
     const config = vi.mocked(posthog.init).mock.calls[0][1]!;
-    expect(config).toMatchObject({ autocapture: false, disable_session_recording: true, person_profiles: "never", respect_dnt: true });
+    expect(config).toMatchObject({
+      autocapture: { dom_event_allowlist: ["click"] }, mask_all_text: true, mask_all_element_attributes: true,
+      disable_session_recording: false, person_profiles: "never", respect_dnt: true,
+      enable_recording_console_log: false,
+      session_recording: { maskAllInputs: true, blockSelector: ".ph-no-capture, input[type=hidden], input[type=file]", recordHeaders: false, recordBody: false },
+    });
+    expect(config.session_recording?.maskCapturedNetworkRequestFn?.({ name: "https://example.com/?secret=yes", method: "POST" } as never)).toBeNull();
     const sanitize = config.before_send as (event: unknown) => { properties: Record<string, string> };
     const result = sanitize({ properties: { $current_url: "https://www.helpmehack.tech/?email=private#token", $referrer: "https://example.com/?secret=yes" } });
     expect(result.properties).toEqual({ $current_url: "https://www.helpmehack.tech/", $referrer: "https://example.com/", is_test_traffic: false, referral_domain: "unknown" });
