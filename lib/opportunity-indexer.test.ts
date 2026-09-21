@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { IndexedRepository } from "./opportunity-index-store";
 import type { OpenSourceOpportunity } from "./types";
 import { mergeRepositorySeeds, reconcileRepositoryUniverse, replaceRepositoryRecords } from "./opportunity-indexer";
 
@@ -22,9 +23,9 @@ describe("persistent opportunity index", () => {
 
 
   it("lets newly discovered repositories replace stale universe entries", () => {
-    const current = [
-      { fullName: "old/one", tiers: ["moderate"] as const, indexedAt: "2026-09-10T00:00:00Z" },
-      { fullName: "old/two", tiers: ["beginner"] as const, indexedAt: "2026-09-11T00:00:00Z" },
+    const current: IndexedRepository[] = [
+      { fullName: "old/one", tiers: ["moderate"], indexedAt: "2026-09-10T00:00:00Z" },
+      { fullName: "old/two", tiers: ["beginner"], indexedAt: "2026-09-11T00:00:00Z" },
     ];
     const next = reconcileRepositoryUniverse(current, [
       { fullName: "new/repo", tiers: ["moderate"] },
@@ -40,9 +41,9 @@ describe("persistent opportunity index", () => {
 
 
   it("keeps the active universe bounded when discovery rotates", () => {
-    const current = [
-      { fullName: "old/one", tiers: ["moderate"] as const },
-      { fullName: "old/two", tiers: ["beginner"] as const },
+    const current: IndexedRepository[] = [
+      { fullName: "old/one", tiers: ["moderate"] },
+      { fullName: "old/two", tiers: ["beginner"] },
     ];
     const next = reconcileRepositoryUniverse(current, [
       { fullName: "new/repo", tiers: ["moderate"] },
