@@ -52,6 +52,7 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
       if (!response.ok) throw new Error(body.error ?? "GitHub check failed.");
       setPayload(body);
     } catch {
+      trackFunnel("product_error", { surface: "directory" });
       setPayload((current) => ({ ...current, warning: "Automatic GitHub refresh failed. Previous results are preserved and marked stale." }));
     }
   }, []);
@@ -62,6 +63,7 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
   }, [payload.refreshIntervalMs, refresh]);
 
   const navigate = (next: View) => {
+    if (view === "overlooked" && next === "open-source") trackFunnel("feed_to_repos_clicked", {});
     setView(next);
     setMenuOpen(false);
     window.history.pushState(null, "", next === "open-source" ? "#open-source" : next === "overlooked" ? "#feed" : window.location.pathname);

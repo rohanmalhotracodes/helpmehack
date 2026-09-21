@@ -1,9 +1,14 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { OpenSourceOpportunity, RepositoryQuality } from "@/lib/types";
 import { OpenSourceDirectory } from "./open-source-directory";
 
+vi.mock("@/lib/analytics", () => ({ trackFunnel: vi.fn() }));
+import { trackFunnel } from "@/lib/analytics";
+
 afterEach(() => {
+  vi.useRealTimers();
+  vi.clearAllMocks();
   cleanup();
   vi.unstubAllGlobals();
 });
@@ -102,5 +107,26 @@ describe("OpenSourceDirectory filters", () => {
       expect.stringContaining("/api/repository-opportunities?owner=acme&repo=prefetch-tool"),
       { cache: "no-store" },
     ));
+  });
+});
+
+
+describe("empty-result signals", () => {
+  it("debounces typing, omits raw queries, and reports once per empty episode", () => {
+    vi.useFakeTimers();
+    render(<OpenSourceDirectory records={[opportunity("react", "react-tool", ["React"])]} savedRepositoryIds={[]} savedIssueIds={[]} onSaveRepository={vi.fn()} onOpenRepository={vi.fn()} />);
+    const input = screen.getByRole("textbox", { name: "Search open-source repositories" });
+    fireEvent.change(input, { target: { value: "private-first" } });
+    act(() => vi.advanceTimersByTime(500));
+    fireEvent.change(input, { target: { value: "private-second" } });
+    act(() => vi.advanceTimersByTime(800));
+    expect(trackFunnel).toHaveBeenCalledExactlyOnceWith("empty_results", { surface: "directory", has_query: true, has_filter: false });
+    fireEvent.change(input, { target: { value: "private-third" } });
+    act(() => vi.advanceTimersByTime(900));
+    expect(trackFunnel).toHaveBeenCalledTimes(1);
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.change(input, { target: { value: "missing" } });
+    act(() => vi.advanceTimersByTime(800));
+    expect(trackFunnel).toHaveBeenCalledTimes(2);
   });
 });

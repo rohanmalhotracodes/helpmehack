@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { trackFunnel } from "@/lib/analytics";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bookmark, ChevronLeft, ChevronRight, CircleDot, Search, Star, X } from "lucide-react";
 import type { RankedContribution } from "@/lib/open-source-tiers";
 import { isDisplayableOpportunityStatus, rankOpenSourceTiers } from "@/lib/open-source-tiers";
@@ -60,6 +61,16 @@ export function OpenSourceDirectory({ records, savedRepositoryIds, savedIssueIds
     repositories: groupRepositories(tier.items, filtered, sort),
   })), [filtered, sort]);
   const visibleCount = new Set(tiers.flatMap((tier) => tier.repositories.map((entry) => entry.key))).size;
+  const reportedEmpty = useRef(false);
+  useEffect(() => {
+    if (visibleCount > 0) { reportedEmpty.current = false; return; }
+    if (reportedEmpty.current) return;
+    const timer = window.setTimeout(() => {
+      reportedEmpty.current = true;
+      trackFunnel("empty_results", { surface: "directory", has_query: Boolean(query.trim()), has_filter: technology !== "All" || savedOnly });
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [visibleCount, query, technology, savedOnly]);
   const filtersActive = Boolean(query) || technology !== "All" || savedOnly;
 
   return (

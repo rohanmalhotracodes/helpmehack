@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, Bookmark, CheckCircle2, ExternalLink, LoaderCircle, ShieldAlert, X } from "lucide-react";
 import { isDisplayableOpportunityStatus } from "@/lib/open-source-tiers";
 import type { OpenSourceOpportunity, OpportunityPayload } from "@/lib/types";
+import { RepositoryFeedback } from "./repository-feedback";
 import { Avatar, StatusPill } from "./ui";
 
 const repositoryRequests = new Map<string, Promise<OpportunityPayload>>();
@@ -55,7 +56,7 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
       if (event.key === "Escape") onClose();
       if (event.key !== "Tab") return;
       const root = document.getElementById("repository-panel");
-      const nodes = root?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      const nodes = root?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])');
       if (!nodes?.length) return;
       const firstNode = nodes[0];
       const lastNode = nodes[nodes.length - 1];
@@ -70,8 +71,9 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
           const fresh = body.records.filter((item): item is OpenSourceOpportunity => item.category === "open-source" && isDisplayableOpportunityStatus(item.status));
           setItems(fresh);
           setState("ready");
+          if (!fresh.length) trackFunnel("empty_results", { surface: "repository_panel", repository: `${owner}/${repo}` });
         })
-        .catch(() => { if (active) setState("error"); });
+        .catch(() => { if (active) { setState("error"); trackFunnel("product_error", { surface: "repository_panel", repository: `${owner}/${repo}` }); } });
     }
     return () => {
       active = false;
@@ -94,7 +96,7 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
             <p className="mono x-muted text-xs">{first.owner}</p>
             <h2 id="repository-title" className="x-text truncate text-xl font-bold tracking-tight">{first.repo}</h2>
           </div>
-          {first.repositoryUrl && <a href={first.repositoryUrl} target="_blank" rel="noreferrer" className="focus-ring x-border x-text hidden h-10 items-center gap-2 rounded-full border px-4 text-xs font-bold hover:bg-[var(--surface-raised)] sm:inline-flex">Repository <ExternalLink size={14} /></a>}
+          {first.repositoryUrl && <a href={first.repositoryUrl} onClick={() => trackFunnel("repository_clicked", { repository: `${owner}/${repo}` })} target="_blank" rel="noreferrer" className="focus-ring x-border x-text hidden h-10 items-center gap-2 rounded-full border px-4 text-xs font-bold hover:bg-[var(--surface-raised)] sm:inline-flex">Repository <ExternalLink size={14} /></a>}
           <button ref={closeRef} onClick={onClose} className="focus-ring x-muted grid h-10 w-10 shrink-0 place-items-center rounded-full hover:bg-[var(--surface-raised)]" aria-label="Close repository"><X size={19} /></button>
         </header>
 
@@ -121,6 +123,7 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
               {state !== "loading" && !items.length && <p className="x-muted px-6 py-12 text-center text-sm">No matching issues were found for this repository.</p>}
             </div>
           </section>
+          {state === "ready" && <RepositoryFeedback key={`${owner}/${repo}`} repository={`${owner}/${repo}`} />}
         </div>
       </section>
     </div>
