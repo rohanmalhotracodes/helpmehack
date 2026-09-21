@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OpenSourceOpportunity } from "./types";
-import { mergeRepositorySeeds, replaceRepositoryRecords } from "./opportunity-indexer";
+import { mergeRepositorySeeds, reconcileRepositoryUniverse, replaceRepositoryRecords } from "./opportunity-indexer";
 
 describe("persistent opportunity index", () => {
   it("merges discovered tiers without losing indexing progress", () => {
@@ -17,6 +17,24 @@ describe("persistent opportunity index", () => {
       tiers: ["beginner", "moderate", "high-impact"],
       indexedAt: "2026-09-14T00:00:00Z",
       failures: 1,
+    });
+  });
+
+
+  it("lets newly discovered repositories replace stale universe entries", () => {
+    const current = [
+      { fullName: "old/one", tiers: ["moderate"] as const, indexedAt: "2026-09-10T00:00:00Z" },
+      { fullName: "old/two", tiers: ["beginner"] as const, indexedAt: "2026-09-11T00:00:00Z" },
+    ];
+    const next = reconcileRepositoryUniverse(current, [
+      { fullName: "new/repo", tiers: ["moderate"] },
+      { fullName: "old/two", tiers: ["high-impact"] },
+    ], 2);
+
+    expect(next.map((entry) => entry.fullName)).toEqual(["new/repo", "old/two"]);
+    expect(next[1]).toMatchObject({
+      indexedAt: "2026-09-11T00:00:00Z",
+      tiers: ["beginner", "high-impact"],
     });
   });
 
