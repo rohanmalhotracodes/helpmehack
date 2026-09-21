@@ -276,7 +276,7 @@ function closesIssue(body: string | null | undefined, owner: string, repo: strin
   if (!body) return false;
   const escapedOwner = owner.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const escapedRepo = repo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`\\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\\s+(?:(?:${escapedOwner}/${escapedRepo})?#)${issueNumber}\\b`, "i").test(body);
+  return new RegExp(`\\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\\s*:?\\s+(?:(?:${escapedOwner}/${escapedRepo})?#|https://github\\.com/${escapedOwner}/${escapedRepo}/issues/)${issueNumber}\\b`, "i").test(body);
 }
 
 function policySignal(text: string | null | undefined): AssignmentPolicyKind | null {
@@ -769,7 +769,7 @@ export async function getRepositoryOpportunityData(owner: string, repo: string, 
     requestedTiers,
   ))).slice(0, 12);
   const checkedAt = new Date().toISOString();
-  const records = await enrichCandidates(candidates, false, checkedAt, true);
+  const records = await enrichCandidates(candidates, false, checkedAt, true, true);
   return {
     records,
     checkedAt,
