@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PolicyPage } from "@/components/policy-page";
 
-export const metadata: Metadata = { title: "Privacy notice | HelpMeHack", description: "This notice describes current data handling on HelpMeHack. Browsing requires no account, name, or payment details.", alternates: { canonical: "https://helpmehack.tech/privacy" } };
+export const metadata: Metadata = { title: "Privacy notice | HelpMeHack", description: "This notice describes current data handling on HelpMeHack. Browsing requires no account, name, or payment details.", alternates: { canonical: "https://www.helpmehack.tech/privacy" } };
 
 const sections = [
   { title: "Your browser", content: <p>Saved repository and issue IDs, plus your theme preference, use local browser storage without account sync. Unsave items individually, or clear this site&apos;s browser data to remove all local settings and bookmarks.</p> },
