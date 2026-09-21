@@ -85,17 +85,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <head>
-        <meta name="google-adsense-account" content="ca-pub-1652643971706701" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify([websiteStructuredData, organizationStructuredData]),
           }}
-        />
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1652643971706701"
-          crossOrigin="anonymous"
         />
       </head>
       <body>
