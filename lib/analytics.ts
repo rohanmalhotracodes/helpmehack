@@ -1,11 +1,19 @@
 import posthog from "posthog-js";
 
 let initialized = false;
+let referralDomain = "unknown";
 
 // Public ingestion credentials for this project's Tin-hosted PostHog project.
 export function initAnalytics() {
-  if (typeof window === "undefined" || !["helpmehack.tech", "www.helpmehack.tech"].includes(window.location.hostname)) return false;
+  if (typeof window === "undefined" || !["helpmehack.tech", "www.helpmehack.tech", "main.d27aveplt50hl3.amplifyapp.com"].includes(window.location.hostname)) return false;
   if (initialized) return true;
+  try {
+    referralDomain = window.sessionStorage.getItem("helpmehack:referral-domain")
+      ?? (document.referrer ? new URL(document.referrer).hostname : "direct");
+    window.sessionStorage.setItem("helpmehack:referral-domain", referralDomain);
+  } catch {
+    // Blocked storage or an invalid referrer must not interrupt browsing.
+  }
   try {
     posthog.init("phc_wRfmTNxMrSjtAjzprffF63z6pgpTVyneKMTPAniXzkdS", {
       api_host: "https://us.i.posthog.com",
@@ -23,6 +31,15 @@ export function initAnalytics() {
       save_campaign_params: false,
       before_send: (event) => {
         if (!event) return null;
+        // A tester opts in before navigation; unmarked traffic is not proof of real users.
+        try {
+          event.properties.is_test_traffic = window.sessionStorage.getItem("helpmehack:analytics-test") === "true";
+        } catch {
+          event.properties.is_test_traffic = false;
+        }
+        // Referring domains support search attribution without retaining search terms.
+        delete event.properties.ph_keyword;
+        event.properties.referral_domain = referralDomain;
         // Keep route context, never query strings or arbitrary URL fragments.
         for (const [key, value] of Object.entries(event.properties)) {
           if (typeof value === "string" && /^https?:\/\//.test(value)) {
