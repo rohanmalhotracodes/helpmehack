@@ -85,7 +85,7 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
           trackFunnel("repository_opened", { repository });
         }} />}
 
-      <SiteFooter onNavigate={navigate} />
+      <SiteFooter />
 
       {menuOpen && <MobileNav view={view} onNavigate={navigate} onClose={() => setMenuOpen(false)} />}
       {activeRepository && activeItems.length > 0 && <RepositoryPanel key={activeRepository} initialItems={activeItems} savedIds={saved.items} repositorySaved={savedRepositories.items.includes(activeRepository)} onSave={(id) => {
