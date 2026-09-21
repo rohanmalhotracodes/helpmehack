@@ -1,4 +1,4 @@
-import { isHumanMaintainerEvent, scoreIssue, scoreRepository, type PullObservation } from "./ranking";
+import { isHumanMaintainerEvent, passesRepositoryQualityGate, scoreIssue, scoreRepository, type PullObservation } from "./ranking";
 import { buildCatalogSearchGroups, isCatalogRepository, labelsForCatalogRepository, REPOSITORY_CATALOG } from "./repository-catalog";
 import { githubAuthenticationLabel, githubAuthorization, hasGitHubAppCredentials, hasGitHubAuthentication } from "./github-auth";
 import type { AssignmentPolicy, AssignmentPolicyKind, AvailabilityStatus, Experience, Guidance, OpenSourceOpportunity, OpportunityPayload, RepositoryGuidance, RepositoryQuality, Source } from "./types";
@@ -481,9 +481,8 @@ async function getRepositoryContext(issue: GitHubIssue, labels: string[], force:
       if (!indexedDiscovery && repo.owner.type !== "Organization") return null;
     }
     const repositoryQuality = await getRepositoryQuality(repo, guideText, readmeText, labels, checkedAt, force, deepQuality || (!cataloged && !indexedDiscovery));
-    const maintenance = repositoryQuality.factors.find((factor) => factor.key === "maintenance")?.earned;
     const newcomerMerges = repositoryQuality.factors.find((factor) => factor.key === "newcomers")?.mergedCount ?? 0;
-    if (!cataloged && ((!maintenance || maintenance <= 0) || (!indexedDiscovery && newcomerMerges < 1))) return null;
+    if (!cataloged && (!passesRepositoryQualityGate(repositoryQuality) || (!indexedDiscovery && newcomerMerges < 1))) return null;
     const repositoryGuidance = makeRepositoryGuidance(repo, documents, checkedAt);
     return { repo, contributionFile, guideText, readmeText, documents, repositoryQuality, repositoryGuidance };
   })());
