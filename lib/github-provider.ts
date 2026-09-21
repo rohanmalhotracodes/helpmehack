@@ -620,7 +620,6 @@ export async function discoverRepositoryUniverse(force = false, target = 500): P
   const searches: Array<{ query: string; tiers: DiscoveryTier[] }> = [
     { query: `archived:false fork:false stars:>=100 pushed:>=${pushedSince} topic:good-first-issue`, tiers: ["beginner"] },
     { query: `archived:false fork:false stars:>=100 pushed:>=${pushedSince} topic:help-wanted`, tiers: ["moderate"] },
-    { query: `archived:false fork:false stars:>=250 pushed:>=${pushedSince} topic:hacktoberfest`, tiers: ["moderate"] },
   ];
   const seeds = new Map<string, RepositoryDiscoverySeed>();
   for (const entry of REPOSITORY_CATALOG) {
@@ -717,13 +716,6 @@ export class GitHubOpportunityProvider {
       },
       {
         tier: "moderate" as const,
-        label: "hacktoberfest",
-        repositories: [] as string[],
-        limit: 24,
-        query: `is:issue is:open archived:false no:assignee updated:>=${updatedSince} label:"hacktoberfest"`,
-      },
-      {
-        tier: "moderate" as const,
         label: "contribution welcome",
         repositories: [] as string[],
         limit: 18,
@@ -760,7 +752,7 @@ export class GitHubOpportunityProvider {
 export async function getRepositoryOpportunityData(owner: string, repo: string, requestedTiers: DiscoveryTier[] = []): Promise<OpportunityPayload> {
   if (!/^[a-z0-9_.-]{1,100}$/i.test(owner) || !/^[a-z0-9_.-]{1,100}$/i.test(repo)) throw new Error("Invalid repository name.");
   const path = `/repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=30&labels=`;
-  const discoveryLabels = [...new Set(["good first issue", "help wanted", "hacktoberfest", "contribution welcome", "contributions welcome", "open for contributions", ...labelsForCatalogRepository(`${owner}/${repo}`)])];
+  const discoveryLabels = [...new Set(["good first issue", "help wanted", "contribution welcome", "contributions welcome", "open for contributions", ...labelsForCatalogRepository(`${owner}/${repo}`)])];
   const issueGroups = await Promise.all(discoveryLabels.map((label) => getJson<GitHubIssue[]>(`${path}${encodeURIComponent(label)}`, false)));
   const addTiers = (items: Candidate[], tiers: DiscoveryTier[]) => items.map((candidate) => ({ ...candidate, tiers: [...new Set([...candidate.tiers, ...tiers])] }));
   const candidates = mergeCandidatePools(issueGroups.map((issues, index) => addTiers(
@@ -781,7 +773,7 @@ export async function getRepositoryOpportunityData(owner: string, repo: string, 
 export async function getRepositoryIndexRecords(owner: string, repo: string, requestedTiers: DiscoveryTier[] = []): Promise<OpenSourceOpportunity[]> {
   if (!/^[a-z0-9_.-]{1,100}$/i.test(owner) || !/^[a-z0-9_.-]{1,100}$/i.test(repo)) return [];
   const path = `/repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=30&labels=`;
-  const discoveryLabels = [...new Set(["good first issue", "help wanted", "hacktoberfest", "contribution welcome", "contributions welcome", "open for contributions", ...labelsForCatalogRepository(`${owner}/${repo}`)])];
+  const discoveryLabels = [...new Set(["good first issue", "help wanted", "contribution welcome", "contributions welcome", "open for contributions", ...labelsForCatalogRepository(`${owner}/${repo}`)])];
   const issueGroups = await Promise.all(discoveryLabels.map((label) => getJson<GitHubIssue[]>(`${path}${encodeURIComponent(label)}`, false, true).catch(() => null)));
   const candidates = mergeCandidatePools(issueGroups.map((issues, index) => {
     const inferredTier: DiscoveryTier = /good first|first[-\s]timers?|beginner|easy/i.test(discoveryLabels[index]) ? "beginner" : "moderate";
