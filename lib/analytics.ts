@@ -1,18 +1,27 @@
 import posthog from "posthog-js";
+import { classifyReferrer, isReferrerChannel, type ReferrerChannel } from "./referrer-channel";
 
 let initialized = false;
 let referralDomain = "unknown";
+let referrerChannel: ReferrerChannel = "unknown";
 
 // Public ingestion credentials for this project's Tin-hosted PostHog project.
 export function initAnalytics() {
   if (typeof window === "undefined" || !["helpmehack.tech", "www.helpmehack.tech", "main.d27aveplt50hl3.amplifyapp.com"].includes(window.location.hostname)) return false;
   if (initialized) return true;
+  // Classify without storage first, so privacy restrictions cannot disable attribution.
+  if (typeof document !== "undefined") {
+    referrerChannel = classifyReferrer(document.referrer, window.location.search ?? "", window.location.hostname);
+    try { referralDomain = document.referrer ? new URL(document.referrer).hostname : "direct"; } catch { /* unknown */ }
+  }
   try {
-    referralDomain = window.sessionStorage.getItem("helpmehack:referral-domain")
-      ?? (document.referrer ? new URL(document.referrer).hostname : "direct");
+    const saved = window.sessionStorage.getItem("helpmehack:referrer-channel:v1");
+    if (isReferrerChannel(saved)) referrerChannel = saved;
+    window.sessionStorage.setItem("helpmehack:referrer-channel:v1", referrerChannel);
+    referralDomain = window.sessionStorage.getItem("helpmehack:referral-domain") ?? referralDomain;
     window.sessionStorage.setItem("helpmehack:referral-domain", referralDomain);
   } catch {
-    // Blocked storage or an invalid referrer must not interrupt browsing.
+    // Keep the in-memory channel when storage is blocked.
   }
   try {
     posthog.init("phc_wRfmTNxMrSjtAjzprffF63z6pgpTVyneKMTPAniXzkdS", {
@@ -66,6 +75,8 @@ export function initAnalytics() {
         // Referring domains support search attribution without retaining search terms.
         delete event.properties.ph_keyword;
         event.properties.referral_domain = referralDomain;
+        event.properties.referrer_channel = referrerChannel;
+        event.properties.referrer_attribution_version = 1;
         // Keep route context, never query strings or arbitrary URL fragments.
         for (const [key, value] of Object.entries(event.properties)) {
           if (typeof value === "string" && /^https?:\/\//.test(value)) {
