@@ -85,6 +85,15 @@ New contributors can only claim one issue until their first pull request is merg
     expect(guidance.assignmentEvidence).toBe("documented");
   });
 
+  it("does not turn a no-wait instruction into an assignment prerequisite", () => {
+    const guidance = summarizeRepositoryGuidance("CircuitVerse/CircuitVerse", "https://github.com/CircuitVerse/CircuitVerse", [{
+      source: { label: "Contribution guide", href: "https://github.com/CircuitVerse/CircuitVerse/blob/master/CONTRIBUTING.md", kind: "guide" },
+      text: "## How to Claim Issues\n1. Check that no one else has claimed it\n2. Leave a comment: I'd like to work on this\n3. Start working immediately - no need to wait for assignment",
+    }], new Date().toISOString());
+    expect(guidance.assignment).toContain("direct contributions");
+    expect(guidance.assignmentSteps).not.toContain("Wait for the documented confirmation before opening a pull request.");
+  });
+
   it("treats an extracted contribution prerequisite as documented evidence", () => {
     const guidance = summarizeRepositoryGuidance("acme/widgets", "https://github.com/acme/widgets", [{
       source: { label: "Contribution guide", href: "https://github.com/acme/widgets/blob/main/CONTRIBUTING.md", kind: "guide" },
