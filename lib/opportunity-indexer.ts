@@ -107,6 +107,8 @@ export async function refreshOpportunityIndex(options: { batchSizeOverride?: num
     try {
       const discovered = await discoverRepositoryUniverse(false, target);
       state.repositories = reconcileRepositoryUniverse(state.repositories, discovered, target);
+      const activeRepositoryKeys = new Set(state.repositories.map((entry) => entry.fullName.toLowerCase()));
+      state.records = state.records.filter((record) => activeRepositoryKeys.has(`${record.owner}/${record.repo}`.toLowerCase()));
       state.lastDiscoveryAt = startedAt;
       discoveryChanged = true;
     } catch (error) {
