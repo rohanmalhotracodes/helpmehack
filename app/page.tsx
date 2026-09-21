@@ -3,8 +3,8 @@ import { OpportunityApp } from "@/components/opportunity-app";
 import { getOpportunityData } from "@/lib/provider";
 
 export const metadata: Metadata = {
-  title: "HelpMeHack | Open source worth starting",
-  description: "Find open-source projects and issues to contribute to. Read the Feed for practical advice, or explore the Repos directory.",
+  title: "HelpMeHack: Open source directory for contributors",
+  description: "Find beginner-friendly open source issues and projects. Compare contribution guidance in Repos, or read practical advice in the Feed.",
   alternates: { canonical: "https://www.helpmehack.tech" },
 };
 

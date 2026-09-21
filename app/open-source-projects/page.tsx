@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import { ContributionPageShell } from "@/components/contribution-page-shell";
 
-const title = "Open source projects to contribute to | HelpMeHack";
-const description = "Find open source projects to contribute to. Compare issue availability, contribution guides, and maintainer activity before choosing your first contribution.";
+const title = "HelpMeHack: Open source projects for new contributors";
+const description = "Find open source projects to contribute to. Check issue availability and contribution rules before choosing your first contribution.";
 const url = "https://www.helpmehack.tech/open-source-projects";
 
 export const metadata: Metadata = {
