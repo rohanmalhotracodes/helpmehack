@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowUpRight, Code2, Search, X } from "lucide-react";
 import type { ProgramOrganizationSummary, SummerOfBitcoinYearArchive } from "@/lib/program-directory";
+import { programsFaq } from "@/lib/seo-content";
+import { SeoFaq } from "./seo-faq";
 
 type ProgramKind = "gsoc" | "summer-of-bitcoin";
 
@@ -232,6 +234,41 @@ export function ProgramsDirectory({
           </div>
         )}
       </section>
+
+      <section aria-labelledby="program-guide-title" className="x-border mt-12 border-t pt-8">
+        <p className="x-muted text-xs font-semibold uppercase tracking-[.14em]">Use history as context</p>
+        <h2 id="program-guide-title" className="x-text mt-2 max-w-[760px] text-2xl font-bold tracking-tight sm:text-3xl">
+          Explore GSoC organizations and open-source programs without guessing from a single year.
+        </h2>
+        <p className="x-muted mt-4 max-w-[72ch] text-base leading-7">
+          Participation history can show which communities have mentored contributors, what technologies they use, and what kinds of projects have been proposed. It does not guarantee that an organization will return in a future cohort, so use HelpMeHack for research and confirm the active program list with the official source.
+        </p>
+        <div className="mt-7 grid gap-6 md:grid-cols-3">
+          <article className="x-border border-t pt-5">
+            <h3 className="x-text text-base font-semibold">Filter by multiple years</h3>
+            <p className="x-muted mt-2 text-sm leading-6">Compare repeated participation across years instead of treating one appearance as a long-term signal.</p>
+          </article>
+          <article className="x-border border-t pt-5">
+            <h3 className="x-text text-base font-semibold">Filter by technologies</h3>
+            <p className="x-muted mt-2 text-sm leading-6">Narrow organizations by languages and tools you already know, then inspect their past projects and contribution paths.</p>
+          </article>
+          <article className="x-border border-t pt-5">
+            <h3 className="x-text text-base font-semibold">Continue beyond programs</h3>
+            <p className="x-muted mt-2 text-sm leading-6">A program application is only one way into open source. You can also browse active repositories and contribute directly throughout the year.</p>
+          </article>
+        </div>
+        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold">
+          <Link href="/open-source-projects" className="focus-ring rounded underline underline-offset-4">Browse open-source projects</Link>
+          <Link href="/contribute" className="focus-ring rounded underline underline-offset-4">Ways to contribute</Link>
+          <Link href="/contribute/first-issue" className="focus-ring rounded underline underline-offset-4">Choose a good first issue</Link>
+        </div>
+      </section>
+
+      <SeoFaq
+        questions={programsFaq}
+        className="mt-12"
+        intro="Answers about HelpMeHack's GSoC and Summer of Bitcoin program data."
+      />
 
       <p className="x-muted mt-8 text-xs leading-5">
         GSoC data includes historical participation and project links and is cached for 30 days. Summer of Bitcoin covers every cohort from 2021 through 2026, with official year links and curated repository mappings where available.
