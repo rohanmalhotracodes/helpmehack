@@ -50,6 +50,10 @@ export default function OpenSourceProjectsPage() {
             ))}
           </ol>
         </section>
+        <nav aria-label="Compare contribution tools" className="x-border mt-8 flex flex-wrap gap-x-6 gap-y-2 border-t pt-6 text-sm">
+          <Link href="/compare/helpmehack-vs-good-first-issue" className="focus-ring py-2 underline underline-offset-4">HelpMeHack vs Good First Issue</Link>
+          <Link href="/compare/helpmehack-vs-up-for-grabs" className="focus-ring py-2 underline underline-offset-4">HelpMeHack vs Up For Grabs</Link>
+        </nav>
       </main>
     </ContributionPageShell>
   );

@@ -8,6 +8,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const gsocOrganizations = await loadGsocOrganizations();
 
   const staticPages: MetadataRoute.Sitemap = [
+    ...["helpmehack-vs-good-first-issue", "helpmehack-vs-up-for-grabs"].map((slug) => ({
+      url: `${baseUrl}/compare/${slug}`,
+      lastModified: new Date("2026-09-21"),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
     {
       url: baseUrl,
       lastModified: now,
