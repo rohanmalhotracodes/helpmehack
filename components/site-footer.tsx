@@ -10,6 +10,7 @@ export function SiteFooter() {
         <p>© 2026 HelpMeHack</p>
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-2" aria-label="Footer navigation">
           <Link href="/about" className={linkClass}>About</Link>
+          <Link href="/programs" className={linkClass}>Programs</Link>
           <a href="https://github.com/rohanmalhotracodes/helpmehack" target="_blank" rel="noreferrer" className={linkClass}>GitHub</a>
           <a href="mailto:helpmehack@mail.tin.computer" className={linkClass}>Contact</a>
           <Link href="/terms" className={linkClass}>Terms</Link>
