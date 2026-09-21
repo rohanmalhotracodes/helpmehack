@@ -62,7 +62,7 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
         ? <OverlookedFeed onOpenSource={() => navigate("open-source")} />
         : <OpenSourceDirectory records={records} savedRepositoryIds={savedRepositories.items} savedIssueIds={saved.items} onSaveRepository={savedRepositories.toggle} onOpenRepository={setActiveRepository} />}
 
-      <SiteFooter onNavigate={navigate} />
+      <SiteFooter />
 
       {menuOpen && <MobileNav view={view} onNavigate={navigate} onClose={() => setMenuOpen(false)} />}
       {activeRepository && activeItems.length > 0 && <RepositoryPanel key={activeRepository} initialItems={activeItems} savedIds={saved.items} repositorySaved={savedRepositories.items.includes(activeRepository)} onSave={(id) => {
@@ -74,7 +74,7 @@ export function OpportunityApp({ initialPayload }: { initialPayload: Opportunity
   );
 }
 
-function SiteFooter({ onNavigate: _onNavigate }: { onNavigate: (view: View) => void }) {
+function SiteFooter() {
   const linkClass = "focus-ring rounded px-1 py-1 font-medium transition-colors hover:text-[var(--text)]";
   return (
     <footer className="x-border mt-12 border-t" aria-label="Site footer">
