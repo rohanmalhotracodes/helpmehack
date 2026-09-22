@@ -1,8 +1,8 @@
-# Contributing to HelpMeHack
+# Contributing to helpmehack
 
-Thanks for considering a contribution to HelpMeHack.
+Thanks for considering a contribution to helpmehack.
 
-HelpMeHack helps developers find open-source repositories and issues that are actually worth starting. Contributions should improve the accuracy, usefulness, reliability, or usability of that experience.
+helpmehack helps developers find open-source repositories and issues that are actually worth starting. Contributions should improve the accuracy, usefulness, reliability, or usability of that experience.
 
 ## Before you start
 
