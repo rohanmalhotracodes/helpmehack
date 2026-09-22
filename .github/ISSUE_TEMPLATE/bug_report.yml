@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem in HelpMeHack
+description: Report a reproducible problem in helpmehack
 title: "[Bug]: "
 labels: ["bug", "needs triage"]
 body:
