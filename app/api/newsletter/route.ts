@@ -39,6 +39,6 @@ export async function POST(request: Request) {
     if (!response.ok) throw new Error(`Provider returned ${response.status}`);
     return NextResponse.json({ message: "Your signup was sent to the newsletter provider." });
   } catch {
-    return NextResponse.json({ error: "The newsletter provider is unavailable. Your address was not stored by HelpMeHack." }, { status: 502 });
+    return NextResponse.json({ error: "The newsletter provider is unavailable. Your address was not stored by helpmehack." }, { status: 502 });
   }
 }
