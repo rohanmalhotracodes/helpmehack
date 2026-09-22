@@ -35,6 +35,6 @@
 - [ ] I reviewed my own diff.
 - [ ] I did not include unrelated generated or agent-created changes.
 - [ ] I added or updated tests when behavior changed.
-- [ ] User-facing terminology is consistent with the rest of HelpMeHack.
+- [ ] User-facing terminology is consistent with the rest of helpmehack.
 - [ ] Documentation was updated where needed.
 - [ ] No secrets, credentials, or private data are included.
