@@ -5,27 +5,27 @@ export type SeoQuestion = {
 
 export const homepageFaq: SeoQuestion[] = [
   {
-    question: "What is HelpMeHack?",
-    answer: "HelpMeHack is an open-source discovery platform for finding active repositories, beginner-friendly issues, contribution programs, and the contribution rules that matter before you start.",
+    question: "What is helpmehack?",
+    answer: "helpmehack is an open-source discovery platform for finding active repositories, beginner-friendly issues, contribution programs, and the contribution rules that matter before you start.",
   },
   {
     question: "How do I find an open-source project to contribute to?",
     answer: "Browse Repos, filter by technologies you know, open a repository, and read the issue and contribution signals. Check the latest GitHub discussion before you begin because project status can change.",
   },
   {
-    question: "Does HelpMeHack list GSoC organizations?",
+    question: "Does helpmehack list GSoC organizations?",
     answer: "Yes. The Programs directory includes Google Summer of Code organization history, participation years, technologies, past projects, and links to official program sources where available.",
   },
   {
-    question: "Does HelpMeHack include Summer of Bitcoin?",
-    answer: "Yes. HelpMeHack includes Summer of Bitcoin cohort history from 2021 through 2026, with official year links and curated repository mappings where available.",
+    question: "Does helpmehack include Summer of Bitcoin?",
+    answer: "Yes. helpmehack includes Summer of Bitcoin cohort history from 2021 through 2026, with official year links and curated repository mappings where available.",
   },
   {
-    question: "How is HelpMeHack different from a good-first-issue list?",
-    answer: "HelpMeHack looks beyond an issue label. It surfaces repository context, contribution guidance, assignment signals, recent discussion, linked pull requests, program history, and project activity so you can investigate before committing time.",
+    question: "How is helpmehack different from a good-first-issue list?",
+    answer: "helpmehack looks beyond an issue label. It surfaces repository context, contribution guidance, assignment signals, recent discussion, linked pull requests, program history, and project activity so you can investigate before committing time.",
   },
   {
-    question: "Does HelpMeHack guarantee that an issue is available?",
+    question: "Does helpmehack guarantee that an issue is available?",
     answer: "No. Availability is a starting signal, not a reservation. Maintainers control assignment and acceptance, so always read the latest issue discussion and the project's contribution rules on GitHub.",
   },
 ];
@@ -44,14 +44,14 @@ export const openSourceProjectsFaq: SeoQuestion[] = [
     answer: "Start with a language or tool you already understand, then prefer a maintained repository with clear contribution instructions and a small issue whose expected result you can reproduce and test.",
   },
   {
-    question: "Do I need an account to browse HelpMeHack?",
-    answer: "No. You can browse projects and contribution guidance without creating a HelpMeHack account. Contributions themselves continue on the project's GitHub repository.",
+    question: "Do I need an account to browse helpmehack?",
+    answer: "No. You can browse projects and contribution guidance without creating a helpmehack account. Contributions themselves continue on the project's GitHub repository.",
   },
 ];
 
 export const programsFaq: SeoQuestion[] = [
   {
-    question: "What open-source programs are available on HelpMeHack?",
+    question: "What open-source programs are available on helpmehack?",
     answer: "The Programs directory currently covers Google Summer of Code organization history and Summer of Bitcoin cohorts, with participation years, technologies, projects, repositories, and official source links where available.",
   },
   {
