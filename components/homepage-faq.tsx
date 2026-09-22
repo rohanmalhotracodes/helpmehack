@@ -32,7 +32,7 @@ export function HomepageFaq() {
           Find the project, program, and contribution context in one place.
         </h2>
         <p className="x-muted mt-4 max-w-[70ch] text-base leading-7">
-          HelpMeHack is built for contributors who want more than a list of issue labels. Use repository signals, program history, and practical contribution guidance to narrow your search, then verify the latest details with the project itself.
+          helpmehack is built for contributors who want more than a list of issue labels. Use repository signals, program history, and practical contribution guidance to narrow your search, then verify the latest details with the project itself.
         </p>
         <div className="mt-8 grid gap-6 sm:grid-cols-3 sm:gap-8">
           {discoveryAreas.map((item) => (
@@ -49,7 +49,7 @@ export function HomepageFaq() {
       <SeoFaq
         questions={homepageFaq}
         className="mt-12"
-        intro="Quick answers about how HelpMeHack finds and explains open-source opportunities."
+        intro="Quick answers about how helpmehack finds and explains open-source opportunities."
       />
     </>
   );
