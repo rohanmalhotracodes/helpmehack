@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 const checks = [
   { title: "Is someone already working on it?", body: "Open the latest GitHub issue. Check assignees, recent comments, and linked pull requests. A good first issue label describes intended difficulty, not availability. If someone has offered a fix, ask before duplicating their work." },
   { title: "Can you explain the change?", body: "Read the contribution guide and reproduce the problem. Pick a task with a clear result you can test. If setup fails, share the exact error in the project's preferred help channel." },
-  { title: "What should you do next?", body: "HelpMeHack's Unassigned status is a starting signal, not a reservation. Possibly claimed or Linked PR exists means you should inspect the discussion. Status unknown means the evidence is incomplete. Follow the project's assignment rules before starting." },
+  { title: "What should you do next?", body: "HelpMeHack's Unassigned status is not a reservation. Possibly claimed means someone may already be working. Status unknown means HelpMeHack could not confirm availability. Check the latest discussion and linked pull requests. If availability is unclear, ask before starting. Follow the project's contribution rules; wait for assignment or approval if required." },
 ];
 
 export default function FirstIssuePage() {
