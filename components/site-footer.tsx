@@ -7,7 +7,7 @@ export function SiteFooter() {
   return (
     <footer className="x-border mt-12 border-t" aria-label="Site footer">
       <div className="x-muted mx-auto flex max-w-[1240px] flex-col gap-3 px-5 py-6 text-xs sm:flex-row sm:items-center sm:justify-between">
-        <p>© 2026 HelpMeHack</p>
+        <p>© 2026 helpmehack</p>
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-2" aria-label="Footer navigation">
           <Link href="/about" className={linkClass}>About</Link>
           <Link href="/programs" className={linkClass}>Programs</Link>
