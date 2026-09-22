@@ -6,7 +6,7 @@ import { SeoFaq } from "@/components/seo-faq";
 import { FaqStructuredData } from "@/components/structured-data";
 import { contributeFaq } from "@/lib/seo-content";
 
-const title = "How to contribute to open source | HelpMeHack";
+const title = "How to contribute to open source | helpmehack";
 const description = "Learn how to contribute to open source through documentation, bug reports, code fixes, and testing. Check project rules and issue status before starting.";
 const url = "https://www.helpmehack.tech/contribute";
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: url },
-  openGraph: { title, description, url, type: "website", siteName: "HelpMeHack" },
+  openGraph: { title, description, url, type: "website", siteName: "helpmehack" },
 };
 
 const topics = [
