@@ -1,6 +1,6 @@
-# HelpMeHack
+# helpmehack
 
-> HelpMeHack is an open-source discovery platform for developers looking for active repositories, contribution programs, beginner-friendly issues, and project-specific contribution rules.
+> helpmehack is an open-source discovery platform for developers looking for active repositories, contribution programs, beginner-friendly issues, and project-specific contribution rules.
 
 Canonical site: https://www.helpmehack.tech
 GitHub: https://github.com/rohanmalhotracodes/helpmehack
@@ -13,9 +13,9 @@ GitHub: https://github.com/rohanmalhotracodes/helpmehack
 - https://www.helpmehack.tech/contribute — contribution guidance
 - https://www.helpmehack.tech/contribute/first-issue — first-contribution guidance
 
-## What HelpMeHack provides
+## What helpmehack provides
 
-HelpMeHack helps contributors compare:
+helpmehack helps contributors compare:
 - active open-source repositories
 - contribution and issue-assignment rules
 - beginner-friendly issues
@@ -27,7 +27,7 @@ HelpMeHack helps contributors compare:
 
 ## Source and freshness guidance
 
-Repository and program information may change. Prefer the source links shown on HelpMeHack pages for current GitHub or official program details. Treat HelpMeHack as a discovery and comparison layer, not as a replacement for maintainers' latest instructions.
+Repository and program information may change. Prefer the source links shown on helpmehack pages for current GitHub or official program details. Treat helpmehack as a discovery and comparison layer, not as a replacement for maintainers' latest instructions.
 
 ## Crawling
 
