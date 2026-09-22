@@ -19,16 +19,12 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/helpmehack-favicon.svg",
-        type: "image/svg+xml",
-      },
-      {
         url: "/helpmehack-mark.png",
         type: "image/png",
         sizes: "367x367",
       },
     ],
-    shortcut: "/helpmehack-favicon.svg",
+    shortcut: "/helpmehack-mark.png",
     apple: "/apple-icon.png",
   },
   keywords: [
