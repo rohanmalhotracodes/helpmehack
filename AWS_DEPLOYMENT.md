@@ -1,6 +1,6 @@
-# Deploy HelpMeHack on AWS Amplify
+# Deploy helpmehack on AWS Amplify
 
-HelpMeHack is a full-stack Next.js SSR application and is configured to deploy directly from GitHub with AWS Amplify Hosting.
+helpmehack is a full-stack Next.js SSR application and is configured to deploy directly from GitHub with AWS Amplify Hosting.
 
 ## What the repository already contains
 
@@ -83,7 +83,7 @@ For an SSR deployment, Amplify sends server runtime logs to Amazon CloudWatch. U
 
 After the default Amplify URL works:
 
-1. Open the HelpMeHack app in Amplify.
+1. Open the helpmehack app in Amplify.
 2. Go to **Hosting > Custom domains**.
 3. Add your domain.
 4. Follow the DNS validation instructions.
@@ -105,7 +105,7 @@ The index stores one metadata item, repository-state items, and current opportun
 
 ## Amplify SSR compute role
 
-Create or attach an Amplify SSR compute role with access only to the HelpMeHack table. The runtime needs:
+Create or attach an Amplify SSR compute role with access only to the helpmehack table. The runtime needs:
 
 ```json
 {
