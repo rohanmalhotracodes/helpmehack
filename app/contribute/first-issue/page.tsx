@@ -3,20 +3,20 @@ import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import { ContributionPageShell } from "@/components/contribution-page-shell";
 
-const title = "How to choose a good first issue | HelpMeHack";
+const title = "How to choose a good first issue | helpmehack";
 const description = "Check whether a good first issue is available before writing code. Read assignment signals, confirm the scope, and choose your next contribution.";
 const url = "https://www.helpmehack.tech/contribute/first-issue";
 
 export const metadata: Metadata = {
   title, description,
   alternates: { canonical: url },
-  openGraph: { title, description, url, type: "article", siteName: "HelpMeHack" },
+  openGraph: { title, description, url, type: "article", siteName: "helpmehack" },
 };
 
 const checks = [
   { title: "Is someone already working on it?", body: "Open the latest GitHub issue. Check assignees, recent comments, and linked pull requests. A good first issue label describes intended difficulty, not availability. If someone has offered a fix, ask before duplicating their work." },
   { title: "Can you explain the change?", body: "Read the contribution guide and reproduce the problem. Pick a task with a clear result you can test. If setup fails, share the exact error in the project's preferred help channel." },
-  { title: "What should you do next?", body: "HelpMeHack's Unassigned status is not a reservation. Possibly claimed means someone may already be working. Status unknown means HelpMeHack could not confirm availability. Check the latest discussion and linked pull requests. If availability is unclear, ask before starting. Follow the project's contribution rules; wait for assignment or approval if required." },
+  { title: "What should you do next?", body: "helpmehack's Unassigned status is not a reservation. Possibly claimed means someone may already be working. Status unknown means helpmehack could not confirm availability. Check the latest discussion and linked pull requests. If availability is unclear, ask before starting. Follow the project's contribution rules; wait for assignment or approval if required." },
 ];
 
 export default function FirstIssuePage() {
