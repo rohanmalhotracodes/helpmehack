@@ -5,7 +5,7 @@ import { FaqStructuredData } from "@/components/structured-data";
 import { loadGsocOrganizations, summarizeProgramOrganization, summerOfBitcoin2026Organizations, summerOfBitcoinYearArchives } from "@/lib/program-directory";
 import { programsFaq } from "@/lib/seo-content";
 
-const title = "GSoC organizations & open-source programs | HelpMeHack";
+const title = "GSoC organizations & open-source programs | helpmehack";
 const description = "Browse Google Summer of Code organization history, technologies, participation years, past projects, and Summer of Bitcoin cohorts from 2021 through 2026.";
 const url = "https://www.helpmehack.tech/programs";
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: url },
-  openGraph: { title, description, url, type: "website", siteName: "HelpMeHack" },
+  openGraph: { title, description, url, type: "website", siteName: "helpmehack" },
 };
 
 export default async function ProgramsPage() {
