@@ -16,7 +16,7 @@ export function SoftwareStructuredData() {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "@id": `${siteUrl}/#software`,
-    name: "HelpMeHack",
+    name: "helpmehack",
     url: siteUrl,
     applicationCategory: "DeveloperApplication",
     operatingSystem: "Web browser",
