@@ -1,6 +1,6 @@
 # helpmehack
 
-A focused contribution browser with two destinations: **Feed**, a read-only HelpMeHack editorial feed, and **Repos**, an evidence-ranked repository directory with currently startable issues. No account, resume, or onboarding is required.
+A focused contribution browser with two destinations: **Feed**, a read-only helpmehack editorial feed, and **Repos**, an evidence-ranked repository directory with currently startable issues. No account, resume, or onboarding is required.
 
 ## Run locally
 
@@ -35,7 +35,7 @@ GITHUB_APP_PRIVATE_KEY_BASE64=base64_encoded_pem
 
 The configured GitHub App can authenticate reads of public repository data across organizations, so no additional personal token is required for the persistent index. `GITHUB_DISCOVERY_TOKEN` remains an optional read-only alternative for deployments that do not configure a GitHub App.
 
-The App needs read-only repository permissions for Contents, Issues, Pull requests, and Metadata. Convert the downloaded PEM with `base64 -i your-app.private-key.pem | tr -d '\n'`. A `SHA256:...` public-key fingerprint is not the private key. If the App has exactly one installation, HelpMeHack discovers its installation ID automatically; set `GITHUB_APP_INSTALLATION_ID` only when the App has multiple installations. HelpMeHack signs a short-lived App JWT, exchanges it for a one-hour installation token, caches that token, and renews it five minutes before expiration. `GITHUB_TOKEN` remains supported as a fallback if the App credentials are missing or a token exchange fails.
+The App needs read-only repository permissions for Contents, Issues, Pull requests, and Metadata. Convert the downloaded PEM with `base64 -i your-app.private-key.pem | tr -d '\n'`. A `SHA256:...` public-key fingerprint is not the private key. If the App has exactly one installation, helpmehack discovers its installation ID automatically; set `GITHUB_APP_INSTALLATION_ID` only when the App has multiple installations. helpmehack signs a short-lived App JWT, exchanges it for a one-hour installation token, caches that token, and renews it five minutes before expiration. `GITHUB_TOKEN` remains supported as a fallback if the App credentials are missing or a token exchange fails.
 
 All credentials are read only in server code. Current issue evidence is cached for 15 minutes with authenticated access and one hour without it; repository behavior is retained for a day, while contribution documents and issue-specific policy evidence refresh with the current-issue cycle. Manual public refreshes are throttled to once per hour. Rechecks use stored ETags for conditional requests where GitHub supplies them. Failed refreshes preserve the client’s last good snapshot and mark it stale.
 
@@ -76,7 +76,7 @@ Without DynamoDB configuration, the application retains its live GitHub fallback
 
 ## AWS deployment
 
-HelpMeHack is configured for **AWS Amplify Hosting** as a full-stack Next.js SSR application.
+helpmehack is configured for **AWS Amplify Hosting** as a full-stack Next.js SSR application.
 
 The repository pins **Next.js 15.5.25** and **Node.js 22**, both supported by Amplify Hosting. The included `amplify.yml` installs dependencies, exposes configured server variables to the Next.js runtime, and builds the `.next` SSR output.
 
@@ -118,6 +118,6 @@ Discovery starts with a reviewed catalog of established projects split across be
 
 ## Newsletter connection
 
-HelpMeHack does not store newsletter addresses. Set `NEWSLETTER_ENDPOINT` to a server-side webhook or email-provider endpoint that accepts `{ "email": "...", "source": "helpmehack.com" }`. Set `NEWSLETTER_API_TOKEN` when that endpoint uses bearer authentication. Until configured, the form reports that signup is unavailable and never shows a false success state.
+helpmehack does not store newsletter addresses. Set `NEWSLETTER_ENDPOINT` to a server-side webhook or email-provider endpoint that accepts `{ "email": "...", "source": "helpmehack.com" }`. Set `NEWSLETTER_API_TOKEN` when that endpoint uses bearer authentication. Until configured, the form reports that signup is unavailable and never shows a false success state.
 
 The previous hackathon, program, discover, and saved destinations are no longer part of the active interface.
