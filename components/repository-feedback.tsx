@@ -17,7 +17,7 @@ export function RepositoryFeedback({ repository }: { repository: string }) {
   const [failed, setFailed] = useState(false);
   const sending = useRef(false);
 
-  const reportUrl = `mailto:helpmehack@mail.tin.computer?subject=${encodeURIComponent(`HelpMeHack problem: ${repository}`)}&body=${encodeURIComponent(`Repository: ${repository}\n\nWhat were you trying to do?\n\nWhat went wrong?\n\nPlease remove any private information before sending.`)}`;
+  const reportUrl = `mailto:helpmehack@mail.tin.computer?subject=${encodeURIComponent(`helpmehack problem: ${repository}`)}&body=${encodeURIComponent(`Repository: ${repository}\n\nWhat were you trying to do?\n\nWhat went wrong?\n\nPlease remove any private information before sending.`)}`;
   const reportLink = <p className="x-muted mt-2 text-xs"><a className="focus-ring inline-flex min-h-11 items-center underline underline-offset-4" href={reportUrl}>Report a problem by email</a><span className="block">Opens your email app. Include what you tried and what went wrong.</span></p>;
 
   if (sent) return <div className="px-4 py-4 sm:px-6"><p role="status" className="x-muted text-xs">Thanks for your feedback.</p>{reportLink}</div>;
@@ -39,7 +39,7 @@ export function RepositoryFeedback({ repository }: { repository: string }) {
     {helpful !== null && <div className="mt-3 max-w-lg">
       <label htmlFor="repository-feedback-comment" className="x-muted text-xs">Comment (optional). Don&apos;t include personal details.</label>
       <textarea id="repository-feedback-comment" className="ph-no-capture focus-ring x-border x-text mt-2 block w-full rounded-xl border bg-transparent p-3 text-sm" value={comment} onChange={(event) => setComment(event.target.value)} maxLength={300} rows={2} />
-      <div className="mt-2 flex items-center justify-between gap-3"><span className="x-muted text-[11px]">{comment.length}/300 · Sent to HelpMeHack via PostHog</span><button type="submit" className="focus-ring x-border x-text min-h-11 shrink-0 rounded-full border px-4 text-xs font-semibold hover:bg-[var(--surface-raised)]">Send feedback</button></div>
+      <div className="mt-2 flex items-center justify-between gap-3"><span className="x-muted text-[11px]">{comment.length}/300 · Sent to helpmehack via PostHog</span><button type="submit" className="focus-ring x-border x-text min-h-11 shrink-0 rounded-full border px-4 text-xs font-semibold hover:bg-[var(--surface-raised)]">Send feedback</button></div>
       {failed && <p role="status" className="x-muted mt-2 text-xs">Feedback is unavailable. You can keep browsing.</p>}
     </div>}
     {reportLink}
