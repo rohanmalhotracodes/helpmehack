@@ -16,7 +16,7 @@ export function ContributionPageShell({ children }: { children: React.ReactNode 
     <div className="app-theme min-h-screen" data-theme={theme}>
       <header className="x-border sticky top-0 z-30 border-b bg-[color:var(--background)]/95 backdrop-blur">
         <div className="mx-auto flex h-[61px] max-w-[1240px] items-center gap-4 px-3 sm:px-5">
-          <Link href="/" className="focus-ring flex shrink-0 items-center gap-2 rounded-lg" aria-label="HelpMeHack home">
+          <Link href="/" className="focus-ring flex shrink-0 items-center gap-2 rounded-lg" aria-label="helpmehack home">
             <Image src="/helpmehack-mark.png" width={34} height={34} priority alt="" className="logo-mark h-[34px] w-[34px] rounded-lg" />
             <span className="x-text hidden text-sm font-bold tracking-tight sm:block">helpmehack</span>
           </Link>
