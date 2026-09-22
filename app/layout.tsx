@@ -16,6 +16,17 @@ export const metadata: Metadata = {
   creator: "HelpMeHack",
   publisher: "HelpMeHack",
   category: "technology",
+  icons: {
+    icon: [
+      {
+        url: "/helpmehack-mark.png",
+        type: "image/png",
+        sizes: "367x367",
+      },
+    ],
+    shortcut: "/helpmehack-mark.png",
+    apple: "/apple-icon.png",
+  },
   keywords: [
     "open source",
     "open source projects",
