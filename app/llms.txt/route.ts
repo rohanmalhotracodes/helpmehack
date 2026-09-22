@@ -1,13 +1,13 @@
 export const dynamic = "force-static";
 
 export function GET() {
-  const body = `# HelpMeHack
+  const body = `# helpmehack
 
-> HelpMeHack is an open-source discovery platform for contributors.
+> helpmehack is an open-source discovery platform for contributors.
 
 Canonical site: https://www.helpmehack.tech
 
-## What HelpMeHack covers
+## What helpmehack covers
 
 - Active open-source repositories and beginner-friendly contribution opportunities
 - Contribution guidance, assignment signals, recent discussion, and linked pull-request context
@@ -27,7 +27,7 @@ Canonical site: https://www.helpmehack.tech
 
 ## Data notes
 
-HelpMeHack provides discovery signals, not guarantees. Repository and issue status can change. Contributors should verify the latest issue discussion and contribution rules on the project's official GitHub repository. Historical program participation does not guarantee future participation.
+helpmehack provides discovery signals, not guarantees. Repository and issue status can change. Contributors should verify the latest issue discussion and contribution rules on the project's official GitHub repository. Historical program participation does not guarantee future participation.
 
 ## Source
 
