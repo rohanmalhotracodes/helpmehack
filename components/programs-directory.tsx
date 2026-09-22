@@ -89,7 +89,7 @@ export function ProgramsDirectory({
         <p className="x-muted text-xs font-semibold uppercase tracking-[.14em]">Annual open-source programs</p>
         <h1 className="x-text mt-3 text-4xl font-bold tracking-tight sm:text-6xl">Find organizations before application season.</h1>
         <p className="x-muted mt-5 max-w-[68ch] text-base leading-7 sm:text-lg">
-          Explore mentoring organizations, participation history, technologies, and past projects without leaving the HelpMeHack experience.
+          Explore mentoring organizations, participation history, technologies, and past projects without leaving the helpmehack experience.
         </p>
       </header>
 
@@ -241,7 +241,7 @@ export function ProgramsDirectory({
           Explore GSoC organizations and open-source programs without guessing from a single year.
         </h2>
         <p className="x-muted mt-4 max-w-[72ch] text-base leading-7">
-          Participation history can show which communities have mentored contributors, what technologies they use, and what kinds of projects have been proposed. It does not guarantee that an organization will return in a future cohort, so use HelpMeHack for research and confirm the active program list with the official source.
+          Participation history can show which communities have mentored contributors, what technologies they use, and what kinds of projects have been proposed. It does not guarantee that an organization will return in a future cohort, so use helpmehack for research and confirm the active program list with the official source.
         </p>
         <div className="mt-7 grid gap-6 md:grid-cols-3">
           <article className="x-border border-t pt-5">
@@ -267,7 +267,7 @@ export function ProgramsDirectory({
       <SeoFaq
         questions={programsFaq}
         className="mt-12"
-        intro="Answers about HelpMeHack's GSoC and Summer of Bitcoin program data."
+        intro="Answers about helpmehack's GSoC and Summer of Bitcoin program data."
       />
 
       <p className="x-muted mt-8 text-xs leading-5">
