@@ -8,9 +8,9 @@ import { loadGsocOrganization } from "@/lib/program-directory";
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const organization = await loadGsocOrganization(slug);
-  if (!organization) return { title: "GSoC organization | HelpMeHack" };
+  if (!organization) return { title: "GSoC organization | helpmehack" };
   return {
-    title: `${organization.name} GSoC history | HelpMeHack`,
+    title: `${organization.name} GSoC history | helpmehack`,
     description: `See ${organization.name}'s Google Summer of Code participation years, projects, technologies, and code links.`,
     alternates: { canonical: `https://www.helpmehack.tech/programs/gsoc/${organization.slug}` },
   };
@@ -38,7 +38,7 @@ export default async function GsocOrganizationPage({ params }: { params: Promise
       keywords: organization.technologies,
       isPartOf: {
         "@type": "WebSite",
-        name: "HelpMeHack",
+        name: "helpmehack",
         url: "https://www.helpmehack.tech",
       },
     },
@@ -46,7 +46,7 @@ export default async function GsocOrganizationPage({ params }: { params: Promise
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
       itemListElement: [
-        { "@type": "ListItem", position: 1, name: "HelpMeHack", item: "https://www.helpmehack.tech" },
+        { "@type": "ListItem", position: 1, name: "helpmehack", item: "https://www.helpmehack.tech" },
         { "@type": "ListItem", position: 2, name: "Programs", item: "https://www.helpmehack.tech/programs" },
         { "@type": "ListItem", position: 3, name: organization.name, item: pageUrl },
       ],
