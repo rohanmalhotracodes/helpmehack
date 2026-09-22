@@ -22,7 +22,7 @@ describe("homepage navigation", () => {
     fireEvent.click(within(landing).getByRole("link", { name: "Feed" }));
     expect(screen.getByRole("heading", { name: "Overlooked feed" })).toBeInTheDocument();
     expect(window.location.hash).toBe("#feed");
-    fireEvent.click(screen.getByRole("button", { name: "HelpMeHack home" }));
+    fireEvent.click(screen.getByRole("button", { name: "helpmehack home" }));
     expect(window.location.hash).toBe("");
     fireEvent.click(within(screen.getByRole("region", { name: /Open source worth starting/i })).getByRole("link", { name: "Repos" }));
     expect(screen.getByRole("heading", { name: "Repository directory" })).toBeInTheDocument();
