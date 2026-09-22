@@ -18,7 +18,7 @@ const posts = [
     id: "linked-work",
     eyebrow: "Before you claim an issue",
     title: "An empty assignee field does not mean nobody is working on it.",
-    body: "Check recent comments and linked pull requests before starting. HelpMeHack treats these signals separately, so an issue can be unassigned while competing work is already visible.",
+    body: "Check recent comments and linked pull requests before starting. helpmehack treats these signals separately, so an issue can be unassigned while competing work is already visible.",
     source: "How GitHub links pull requests to issues",
     href: "https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue",
     icon: GitPullRequest,
@@ -56,7 +56,7 @@ export function OverlookedFeed({ onOpenSource }: { onOpenSource: () => void }) {
         <section className="x-border border-x" aria-labelledby="feed-title">
           <header className="x-border border-b px-4 py-4 sm:px-5">
             <h1 id="feed-title" className="x-text text-xl font-bold tracking-tight">Feed</h1>
-            <p className="x-muted mt-1 text-sm">Practical open-source context and contribution advice from HelpMeHack.</p>
+            <p className="x-muted mt-1 text-sm">Practical open-source context and contribution advice from helpmehack.</p>
           </header>
           <div className="divide-y x-border">
             {posts.map((post) => {
