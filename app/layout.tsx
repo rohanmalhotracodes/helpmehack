@@ -3,18 +3,18 @@ import "./globals.css";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 
 const siteUrl = "https://www.helpmehack.tech";
-const siteName = "HelpMeHack";
+const siteName = "helpmehack";
 const siteDescription =
   "Discover active open-source projects, contribution programs, beginner-friendly issues, and the contribution rules that matter before you start.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "HelpMeHack — Find open source projects worth contributing to",
+  title: "helpmehack — Find open source projects worth contributing to",
   description: siteDescription,
   applicationName: siteName,
-  authors: [{ name: "HelpMeHack" }],
-  creator: "HelpMeHack",
-  publisher: "HelpMeHack",
+  authors: [{ name: "helpmehack" }],
+  creator: "helpmehack",
+  publisher: "helpmehack",
   category: "technology",
   icons: {
     icon: [
@@ -45,18 +45,18 @@ export const metadata: Metadata = {
     type: "website",
     url: siteUrl,
     siteName,
-    title: "HelpMeHack — Find open source projects worth contributing to",
+    title: "helpmehack — Find open source projects worth contributing to",
     description: siteDescription,
     images: [
       {
         url: "/helpmehack-mark.png",
-        alt: "HelpMeHack",
+        alt: "helpmehack",
       },
     ],
   },
   twitter: {
     card: "summary",
-    title: "HelpMeHack — Find open source projects worth contributing to",
+    title: "helpmehack — Find open source projects worth contributing to",
     description: siteDescription,
     images: ["/helpmehack-mark.png"],
   },
