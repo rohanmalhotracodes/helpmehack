@@ -123,7 +123,7 @@ export function RepositoryPanel({ initialItems, savedIds, repositorySaved, onSav
           <section aria-labelledby="issues-title">
             <div className="x-border flex items-center justify-between border-b px-4 py-3 sm:px-6"><div><h3 id="issues-title" className="x-text text-sm font-bold">Issues to review</h3><p className="x-muted mt-0.5 text-[11px]">{state === "loading" ? "Verifying the current issue list…" : state === "error" ? `${items.length} ${items.length === 1 ? "issue" : "issues"} in the last available snapshot` : `${items.length} matching ${items.length === 1 ? "issue" : "issues"}`}</p></div>{state === "loading" && <span className="x-muted flex items-center gap-2 text-xs"><LoaderCircle size={14} className="animate-spin" />Checking repository…</span>}{state === "error" && <span className="text-amber-400 text-xs">Showing the last available snapshot</span>}</div>
             <div className="divide-y" aria-live="polite">
-              {state === "loading" ? <div className="x-muted flex min-h-40 items-center justify-center gap-2 px-6 text-center text-sm"><LoaderCircle size={16} className="animate-spin" />Checking labels, assignments, claims, and linked pull requests…</div> : items.map((item) => <IssueRow key={item.id} item={item} saved={savedIds.includes(item.id)} onSave={() => onSave(item.id)} />)}
+              {state === "loading" ? <div className="x-muted flex min-h-40 items-center justify-center gap-2 px-6 text-center text-sm"><LoaderCircle size={16} className="animate-spin" />Checking labels, assignments, claims, and linked pull requests…</div> : items.map((item) => <IssueRow key={item.id} item={item} stale={state === "error"} saved={savedIds.includes(item.id)} onSave={() => onSave(item.id)} />)}
               {state !== "loading" && !items.length && <p className="x-muted px-6 py-12 text-center text-sm">No matching issues were found for this repository.</p>}
             </div>
           </section>
@@ -138,13 +138,30 @@ function GuidanceCard({ title, icon: Icon, badge, children }: { title: string; i
   return <div className="x-border x-raised rounded-xl border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><h4 className="x-text flex items-center gap-2 text-xs font-bold"><Icon size={14} />{title}</h4>{badge && <span className="x-border x-muted rounded-full border px-2 py-0.5 text-[9px] font-semibold">{badge}</span>}</div><div className="x-muted mt-2 text-xs leading-5">{children}</div></div>;
 }
 
-function IssueRow({ item, saved, onSave }: { item: OpenSourceOpportunity; saved: boolean; onSave: () => void }) {
+function issueNextStep(item: OpenSourceOpportunity, stale: boolean) {
+  if (stale || item.status === "possibly-claimed" || item.status === "unknown") {
+    return "Check the issue discussion for current availability. If unclear, ask before starting; follow the contribution guide.";
+  }
+  switch (item.assignmentPolicy?.source ? item.assignmentPolicy.kind : "unknown") {
+    case "assignment-required":
+      return "Follow the contribution guide's prerequisites, then request assignment in the issue. Wait for confirmation before coding.";
+    case "approval-required":
+      return "Discuss your approach in the issue and wait for maintainer approval before coding.";
+    case "direct":
+      return "Check for competing work, then follow the contribution guide's setup steps. Formal assignment is not required.";
+    default:
+      return "Read the issue discussion and contribution guide. If the next step is unclear, ask in the issue before coding.";
+  }
+}
+
+function IssueRow({ item, stale, saved, onSave }: { item: OpenSourceOpportunity; stale: boolean; saved: boolean; onSave: () => void }) {
+  const nextStepId = `issue-next-step-${item.id}`;
   const availabilityWarning = item.status === "possibly-claimed"
     ? "Someone may already be working on this issue."
     : item.status === "unknown"
       ? "HelpMeHack could not confirm whether this issue is available."
       : null;
-  return <article className="x-border flex items-start gap-3 px-4 py-4 transition-colors hover:bg-[var(--surface-raised)] sm:px-6"><span className="mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-emerald-500 text-emerald-500"><span className="h-1 w-1 rounded-full bg-current" /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1.5"><h4 className="x-text text-sm font-bold leading-5 sm:text-base">{item.title}</h4>{item.labels.slice(0, 3).map((label) => <span key={label} className="x-border x-raised rounded-full border px-2 py-0.5 text-[10px] font-medium">{label}</span>)}</div><p className="x-muted mt-1 text-xs">#{item.issueNumber} · updated {formatDate(item.updatedAt)}{item.status === "ask-first" ? " · check assignment guidance above" : ""}</p><div className="mt-2"><StatusPill status={item.status} />{availabilityWarning && <p className="x-text mt-1 text-xs leading-5">{availabilityWarning}</p>}</div><p className="x-muted mt-2 line-clamp-2 text-xs leading-5">{item.summary}</p></div><div className="flex shrink-0 items-center gap-1"><button onClick={onSave} aria-pressed={saved} className="focus-ring x-muted grid h-9 w-9 place-items-center rounded-full hover:bg-[var(--background)]" aria-label={saved ? "Remove saved issue" : "Save issue"}><Bookmark size={16} fill={saved ? "currentColor" : "none"} /></button>{item.issueUrl && <a href={item.issueUrl} onClick={() => trackFunnel("contribution_issue_clicked", { repository: `${item.owner}/${item.repo}`, issue_number: item.issueNumber })} target="_blank" rel="noreferrer" className="focus-ring x-primary grid h-9 w-9 place-items-center rounded-full" aria-label={`Open issue #${item.issueNumber} on GitHub`}><ArrowUpRight size={16} /></a>}</div></article>;
+  return <article className="x-border flex items-start gap-3 px-4 py-4 transition-colors hover:bg-[var(--surface-raised)] sm:px-6"><span className="mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-emerald-500 text-emerald-500"><span className="h-1 w-1 rounded-full bg-current" /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1.5"><h4 className="x-text text-sm font-bold leading-5 sm:text-base">{item.title}</h4>{item.labels.slice(0, 3).map((label) => <span key={label} className="x-border x-raised rounded-full border px-2 py-0.5 text-[10px] font-medium">{label}</span>)}</div><p className="x-muted mt-1 text-xs">#{item.issueNumber} · updated {formatDate(item.updatedAt)}{item.status === "ask-first" ? " · check assignment guidance above" : ""}</p><div className="mt-2"><StatusPill status={item.status} />{availabilityWarning && <p className="x-text mt-1 text-xs leading-5">{availabilityWarning}</p>}</div><p className="x-muted mt-2 line-clamp-2 text-xs leading-5">{item.summary}</p>{item.issueUrl && <p id={nextStepId} className="x-muted mt-2 text-xs leading-5"><span className="x-text font-semibold">Next on GitHub: </span>{issueNextStep(item, stale)}</p>}</div><div className="flex shrink-0 items-center gap-1"><button onClick={onSave} aria-pressed={saved} className="focus-ring x-muted grid h-9 w-9 place-items-center rounded-full hover:bg-[var(--background)]" aria-label={saved ? "Remove saved issue" : "Save issue"}><Bookmark size={16} fill={saved ? "currentColor" : "none"} /></button>{item.issueUrl && <a href={item.issueUrl} onClick={() => trackFunnel("contribution_issue_clicked", { repository: `${item.owner}/${item.repo}`, issue_number: item.issueNumber })} target="_blank" rel="noreferrer" className="focus-ring x-primary grid h-9 w-9 place-items-center rounded-full" aria-label={`Open issue #${item.issueNumber} on GitHub`} aria-describedby={nextStepId}><ArrowUpRight size={16} /></a>}</div></article>;
 }
 
 function formatDate(value: string) {
