@@ -199,8 +199,6 @@ export function ProgramsDirectory({
             Explore mentoring organizations, participation history, technologies, and past projects without leaving the helpmehack experience.
           </p>
         </div>
-
-        </div>
       </header>
 
       <div className="mt-8 flex flex-wrap gap-2" role="tablist" aria-label="Programs">
