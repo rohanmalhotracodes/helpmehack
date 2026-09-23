@@ -136,8 +136,18 @@ export async function refreshOpportunityIndex(options: { batchSizeOverride?: num
   }
 
   const effectiveBatchSize = batchSizeOverride ?? (availableRepositories < 60 ? Math.max(configuredBatchSize, 30) : configuredBatchSize);
+  const repositoriesWithCommitFreshness = new Set(
+    state.records
+      .filter((record) => Boolean(record.repositoryLastCommitAt))
+      .map((record) => `${record.owner}/${record.repo}`.toLowerCase()),
+  );
   const selected = [...state.repositories]
-    .sort((a, b) => Date.parse(a.indexedAt ?? "1970-01-01") - Date.parse(b.indexedAt ?? "1970-01-01"))
+    .sort((a, b) => {
+      const aHasCommitFreshness = repositoriesWithCommitFreshness.has(a.fullName.toLowerCase());
+      const bHasCommitFreshness = repositoriesWithCommitFreshness.has(b.fullName.toLowerCase());
+      if (aHasCommitFreshness !== bHasCommitFreshness) return aHasCommitFreshness ? 1 : -1;
+      return Date.parse(a.indexedAt ?? "1970-01-01") - Date.parse(b.indexedAt ?? "1970-01-01");
+    })
     .slice(0, effectiveBatchSize);
   let refreshed = 0;
   let failed = 0;

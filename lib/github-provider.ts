@@ -31,6 +31,12 @@ type GitHubRepo = {
   full_name: string; name: string; description: string | null; html_url: string; language: string | null; owner: GitHubUser;
   archived: boolean; disabled?: boolean; fork?: boolean; topics?: string[]; stargazers_count: number; forks_count: number; pushed_at: string | null; created_at?: string;
 };
+type GitHubCommit = {
+  commit?: {
+    committer?: { date?: string | null };
+    author?: { date?: string | null };
+  };
+};
 type GitHubComment = { html_url: string; body: string | null; created_at: string; user: GitHubUser; author_association: string };
 type TimelineIssue = { html_url?: string; title?: string; body?: string | null; state?: string; draft?: boolean; pull_request?: { merged_at?: string | null } };
 type TimelineEvent = {
@@ -60,6 +66,7 @@ type RepositoryContext = {
   documents: DocumentationDocument[];
   repositoryQuality: RepositoryQuality;
   repositoryGuidance: RepositoryGuidance;
+  latestCommitAt?: string;
 };
 
 const languageColors: Record<string, string> = {
@@ -451,12 +458,13 @@ async function getRepositoryContext(issue: GitHubIssue, labels: string[], force:
   const path = issue.repository_url.replace(`${API_ROOT}/repos/`, "");
   const cacheKey = `${path}:${deepQuality ? "deep" : indexedDiscovery ? "index" : "feed"}`;
   if (!cache.has(cacheKey)) cache.set(cacheKey, (async () => {
-    const [repo, topLevelContributionFile, readmeFile, communityProfile] = await Promise.all([
+    const [repo, topLevelContributionFile, readmeFile, communityProfile, latestCommits] = await Promise.all([
       getJson<GitHubRepo>(issue.repository_url, force),
       getJson<ContentFile>(`/repos/${path}/contents/CONTRIBUTING.md`, force, true),
       getJson<ContentFile>(`/repos/${path}/readme`, force, true),
       getJson<CommunityProfile>(`/repos/${path}/community/profile`, force, true),
-    ]).catch(() => [null, null, null, null] as const);
+      getJson<GitHubCommit[]>(`/repos/${path}/commits?per_page=1`, force, true),
+    ]).catch(() => [null, null, null, null, null] as const);
     if (!repo || repo.archived || repo.disabled || isPracticeRepository(repo)) return null;
     const communityGuideUrl = communityProfile?.files?.contributing?.url;
     const contributionFile = topLevelContributionFile ?? (communityGuideUrl ? await getJson<ContentFile>(communityGuideUrl, force, true) : null);
@@ -484,7 +492,11 @@ async function getRepositoryContext(issue: GitHubIssue, labels: string[], force:
     const newcomerMerges = repositoryQuality.factors.find((factor) => factor.key === "newcomers")?.mergedCount ?? 0;
     if (!cataloged && (!passesRepositoryQualityGate(repositoryQuality) || (!indexedDiscovery && newcomerMerges < 1))) return null;
     const repositoryGuidance = makeRepositoryGuidance(repo, documents, checkedAt);
-    return { repo, contributionFile, guideText, readmeText, documents, repositoryQuality, repositoryGuidance };
+    const latestCommitAt = latestCommits?.[0]?.commit?.committer?.date
+      ?? latestCommits?.[0]?.commit?.author?.date
+      ?? repo.pushed_at
+      ?? undefined;
+    return { repo, contributionFile, guideText, readmeText, documents, repositoryQuality, repositoryGuidance, latestCommitAt };
   })());
   return cache.get(cacheKey)!;
 }
@@ -503,7 +515,7 @@ async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: stri
     getJson<TimelineEvent[]>(`/repos/${owner}/${repoName}/issues/${issue.number}/timeline?per_page=50`, force, true, false),
   ]).catch(() => [null, null, null] as const);
   if (!context) return null;
-  const { repo, contributionFile, guideText, readmeText, documents, repositoryQuality, repositoryGuidance } = context;
+  const { repo, contributionFile, guideText, readmeText, documents, repositoryQuality, repositoryGuidance, latestCommitAt } = context;
   const issueAwareRepositoryGuidance = applyIssueGuidance(repositoryGuidance, issue, comments);
 
   const policy = makePolicy(issue, comments, documents, checkedAt);
@@ -557,7 +569,7 @@ async function enrichIssue(candidate: Candidate, force: boolean, checkedAt: stri
   return {
     id: `github-${issue.id}`, category: "open-source", owner, repo: repoName, avatar: repo.owner.avatar_url || initials(owner), issueNumber: issue.number,
     title: issue.title, summary: cleanSummary(issue.body, repo.description ?? "Open issue with a beginner-oriented label."), repositoryDescription: repo.description ?? undefined, keyRequirement, language: repo.language ?? "Unknown", languageColor: languageColors[repo.language ?? ""] ?? "#71717a", technologies: repositoryTechnologies(repo), matchingIssueCount: candidate.matchingIssueCount,
-    labels: labels.slice(0, 4), experience: experienceForIssue(labels, tiers), status, statusDetail, checkedAt, updatedAt: issue.updated_at,
+    labels: labels.slice(0, 4), experience: experienceForIssue(labels, tiers), status, statusDetail, checkedAt, updatedAt: issue.updated_at, repositoryLastCommitAt: latestCommitAt,
     maintainerActivity: maintainerReplies ? `${maintainerReplies} human maintainer ${maintainerReplies === 1 ? "reply" : "replies"} in this issue` : undefined,
     activityWindow: maintainerReplies ? `${comments?.length ?? 0} fetched comments in the current issue thread` : undefined, caution, assignment: policy.detail,
     visibleClaims: recentClaim ? `Possible claim from @${recentClaim.user.login} on ${new Date(recentClaim.created_at).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" })}.` : `No claim language found in ${comments?.length ?? 0} fetched comments from the last 30 days. Automated detection can miss informal claims.`,

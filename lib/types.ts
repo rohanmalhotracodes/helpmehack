@@ -86,6 +86,7 @@ export type OpenSourceOpportunity = {
   statusDetail: string;
   checkedAt: string;
   updatedAt: string;
+  repositoryLastCommitAt?: string;
   maintainerActivity?: string;
   activityWindow?: string;
   caution: string;
