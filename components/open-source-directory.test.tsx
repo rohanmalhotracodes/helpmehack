@@ -49,6 +49,7 @@ function opportunity(id: string, repo: string, technologies: string[]): OpenSour
     statusDetail: "No competing work found.",
     checkedAt: "2026-09-13T00:00:00Z",
     updatedAt: "2026-09-13T00:00:00Z",
+    repositoryLastCommitAt: "2026-09-23T10:03:00Z",
     caution: "Recheck before starting.",
     assignment: "No rule confirmed.",
     visibleClaims: "None found.",
@@ -77,6 +78,17 @@ describe("OpenSourceDirectory filters", () => {
     fireEvent.click(screen.getByRole("button", { name: "Saved 1" }));
     expect(screen.getByText("react-tool")).toBeInTheDocument();
     expect(screen.queryByText("django-tool")).not.toBeInTheDocument();
+  });
+
+  it("labels sorting clearly and shows latest commit freshness on cards", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-23T10:15:00Z"));
+    render(<OpenSourceDirectory records={[opportunity("react-issue", "react-tool", ["TypeScript", "React"])]} savedRepositoryIds={[]} savedIssueIds={[]} onSaveRepository={vi.fn()} onOpenRepository={vi.fn()} />);
+
+    expect(screen.getByRole("combobox", { name: "Sort repositories" })).toHaveValue("recommended");
+    expect(screen.getByRole("option", { name: "Recommended" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Latest commits" })).toBeInTheDocument();
+    expect(screen.getAllByText("Last commit 12 min ago").length).toBeGreaterThan(0);
   });
 
   it("opens a repository from the full-card target without opening when saving", () => {
