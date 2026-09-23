@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { loadGsocOrganization } from "@/lib/program-directory";
 
-export const revalidate = 60 * 60 * 24 * 30;
+export const revalidate = 2592000;
 
 export async function GET(
   _request: Request,
