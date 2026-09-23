@@ -7,7 +7,7 @@ import { programsFaq } from "@/lib/seo-content";
 
 const title = "GSoC organizations & open-source programs | helpmehack";
 const description = "Browse Google Summer of Code organization history, technologies, participation years, past projects, and Summer of Bitcoin cohorts from 2021 through 2026.";
-const url = "https://www.helpmehack.tech/programs";
+const url = "https://www.helpmehack.tech/programs";\n\nexport const revalidate = 60 * 60 * 24 * 30;
 
 export const metadata: Metadata = {
   title,
