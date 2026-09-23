@@ -191,31 +191,37 @@ export function ProgramsDirectory({
 
   return (
     <main id="main-content" className="mx-auto w-full max-w-[1240px] px-3 py-8 sm:px-5 sm:py-12">
-      <header className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+      <header className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
-          <p className="x-muted text-xs font-semibold uppercase tracking-[.14em]">Annual open-source programs</p>
+          <p className="x-muted pr-28 text-xs font-semibold uppercase tracking-[.14em] lg:pr-0">Annual open-source programs</p>
           <h1 className="x-text mt-3 text-4xl font-bold tracking-tight sm:text-6xl">Find organizations before application season.</h1>
           <p className="x-muted mt-5 max-w-[68ch] text-base leading-7 sm:text-lg">
             Explore mentoring organizations, participation history, technologies, and past projects without leaving the helpmehack experience.
           </p>
         </div>
 
-        <div className="x-border min-w-[190px] rounded-2xl border bg-[var(--surface-raised)] px-5 py-4 lg:mt-1 lg:text-right">
-          <p className="x-muted text-[11px] font-semibold uppercase tracking-[.14em]">Organizations</p>
-          <div className="mt-1 flex items-baseline gap-2 lg:justify-end">
-            <span className="x-text text-3xl font-bold tracking-tight">{filtered.length}</span>
-            {filtered.length !== source.length && <span className="x-muted text-sm font-semibold">of {source.length}</span>}
+        <div className="x-border hidden min-w-[176px] rounded-2xl border bg-[var(--surface-raised)] px-4 py-3 text-right lg:mt-1 lg:block">
+          <p className="x-muted text-[10px] font-semibold uppercase tracking-[.14em]">Organizations</p>
+          <div className="mt-1 flex items-baseline justify-end gap-2">
+            <span className="x-text text-2xl font-bold tracking-tight">{filtered.length}</span>
+            {filtered.length !== source.length && <span className="x-muted text-xs font-semibold">of {source.length}</span>}
           </div>
-          <p className="x-muted mt-1 text-xs">{program === "gsoc" ? "GSoC directory" : "Summer of Bitcoin directory"}</p>
+          <p className="x-muted mt-1 text-[11px]">{program === "gsoc" ? "GSoC directory" : "Summer of Bitcoin directory"}</p>
+        </div>
+
+        <div className="x-border absolute right-0 top-0 rounded-full border bg-[var(--surface-raised)] px-3 py-1.5 text-right lg:hidden">
+          <span className="x-text text-sm font-bold">{filtered.length}</span>
+          {filtered.length !== source.length && <span className="x-muted ml-1 text-[11px] font-semibold">/ {source.length}</span>}
+          <span className="x-muted ml-1 text-[10px] font-semibold">orgs</span>
         </div>
       </header>
 
       <div className="mt-8 flex flex-wrap gap-2" role="tablist" aria-label="Programs">
         <button type="button" role="tab" aria-selected={program === "gsoc"} onClick={() => switchProgram("gsoc")} className={program === "gsoc" ? "focus-ring x-primary rounded-full border border-transparent px-5 py-2.5 text-sm font-bold" : "focus-ring x-border x-text rounded-full border px-5 py-2.5 text-sm font-bold hover:bg-[var(--surface-raised)]"}>
-          GSoC <span className="ml-1 opacity-70">{gsoc.length}</span>
+          GSoC <span className="ml-1 opacity-70">{gsoc.length} orgs</span>
         </button>
         <button type="button" role="tab" aria-selected={program === "summer-of-bitcoin"} onClick={() => switchProgram("summer-of-bitcoin")} className={program === "summer-of-bitcoin" ? "focus-ring x-primary rounded-full border border-transparent px-5 py-2.5 text-sm font-bold" : "focus-ring x-border x-text rounded-full border px-5 py-2.5 text-sm font-bold hover:bg-[var(--surface-raised)]"}>
-          Summer of Bitcoin <span className="ml-1 opacity-70">2021–2026</span>
+          Summer of Bitcoin <span className="ml-1 opacity-70">{summerOfBitcoin.length} orgs</span>
         </button>
       </div>
 
