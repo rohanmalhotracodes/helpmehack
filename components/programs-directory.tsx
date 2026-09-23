@@ -200,22 +200,31 @@ export function ProgramsDirectory({
           </p>
         </div>
 
-        <div className="x-border min-w-[190px] rounded-2xl border bg-[var(--surface-raised)] px-5 py-4 lg:mt-1 lg:text-right">
-          <p className="x-muted text-[11px] font-semibold uppercase tracking-[.14em]">Organizations</p>
-          <div className="mt-1 flex items-baseline gap-2 lg:justify-end">
-            <span className="x-text text-3xl font-bold tracking-tight">{filtered.length}</span>
-            {filtered.length !== source.length && <span className="x-muted text-sm font-semibold">of {source.length}</span>}
+        <div className="x-border hidden min-w-[176px] rounded-2xl border bg-[var(--surface-raised)] px-4 py-3 text-right lg:mt-1 lg:block">
+          <p className="x-muted text-[10px] font-semibold uppercase tracking-[.14em]">Organizations</p>
+          <div className="mt-1 flex items-baseline justify-end gap-2">
+            <span className="x-text text-2xl font-bold tracking-tight">{filtered.length}</span>
+            {filtered.length !== source.length && <span className="x-muted text-xs font-semibold">of {source.length}</span>}
           </div>
-          <p className="x-muted mt-1 text-xs">{program === "gsoc" ? "GSoC directory" : "Summer of Bitcoin directory"}</p>
+          <p className="x-muted mt-1 text-[11px]">{program === "gsoc" ? "GSoC directory" : "Summer of Bitcoin directory"}</p>
         </div>
       </header>
 
-      <div className="mt-8 flex flex-wrap gap-2" role="tablist" aria-label="Programs">
+      <div className="mt-5 flex items-center justify-between gap-3 lg:hidden">
+        <p className="x-muted text-xs font-semibold">
+          <span className="x-text">{filtered.length}</span> shown
+          <span className="mx-1.5 opacity-50">·</span>
+          {source.length} total
+        </p>
+        <span className="x-muted text-[11px] font-semibold">{program === "gsoc" ? "GSoC" : "Summer of Bitcoin"}</span>
+      </div>
+
+      <div className="mt-5 flex flex-wrap gap-2 lg:mt-8" role="tablist" aria-label="Programs">
         <button type="button" role="tab" aria-selected={program === "gsoc"} onClick={() => switchProgram("gsoc")} className={program === "gsoc" ? "focus-ring x-primary rounded-full border border-transparent px-5 py-2.5 text-sm font-bold" : "focus-ring x-border x-text rounded-full border px-5 py-2.5 text-sm font-bold hover:bg-[var(--surface-raised)]"}>
-          GSoC <span className="ml-1 opacity-70">{gsoc.length}</span>
+          GSoC <span className="ml-1 opacity-70">{gsoc.length} orgs</span>
         </button>
         <button type="button" role="tab" aria-selected={program === "summer-of-bitcoin"} onClick={() => switchProgram("summer-of-bitcoin")} className={program === "summer-of-bitcoin" ? "focus-ring x-primary rounded-full border border-transparent px-5 py-2.5 text-sm font-bold" : "focus-ring x-border x-text rounded-full border px-5 py-2.5 text-sm font-bold hover:bg-[var(--surface-raised)]"}>
-          Summer of Bitcoin <span className="ml-1 opacity-70">2021–2026</span>
+          Summer of Bitcoin <span className="ml-1 opacity-70">{summerOfBitcoin.length} orgs</span>
         </button>
       </div>
 
