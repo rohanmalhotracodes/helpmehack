@@ -354,14 +354,12 @@ export function ProgramsDirectory({
                       Official program <ArrowUpRight size={12} className="ml-1 inline" />
                     </a>
                   )}
-                  {organization.websiteUrl && (
+                  {program === "summer-of-bitcoin" && organization.websiteUrl && (
                     <a
                       href={organization.websiteUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="focus-ring x-muted rounded hover:text-[var(--text)] hover:underline"
-                      onClick={isGsoc ? (event) => event.stopPropagation() : undefined}
-                      onKeyDown={isGsoc ? (event) => event.stopPropagation() : undefined}
                     >
                       Organization
                     </a>
