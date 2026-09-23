@@ -2,7 +2,7 @@
 
 import { trackFunnel } from "@/lib/analytics";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bookmark, ChevronLeft, ChevronRight, CircleDot, Search, Star, X } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, CircleDot, GitCommitHorizontal, Search, Star, X } from "lucide-react";
 import type { RankedContribution } from "@/lib/open-source-tiers";
 import { isDisplayableOpportunityStatus, rankOpenSourceTiers } from "@/lib/open-source-tiers";
 import type { OpenSourceOpportunity } from "@/lib/types";
@@ -87,11 +87,14 @@ export function OpenSourceDirectory({ records, savedRepositoryIds, savedIssueIds
             <input value={query} onChange={(event) => setQuery(event.target.value)} className="focus-ring placeholder-muted x-border x-text h-12 w-full rounded-full border bg-transparent pl-11 pr-11 text-sm" placeholder="Search repositories, technologies, or issue labels" aria-label="Search open-source repositories" />
             {query && <button onClick={() => setQuery("")} className="focus-ring x-muted absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full hover:bg-[var(--surface-raised)]" aria-label="Clear search"><X size={16} /></button>}
           </div>
-          <select value={sort} onChange={(event) => setSort(event.target.value as RepositorySort)} className="focus-ring x-border x-text h-12 rounded-full border bg-[var(--background)] px-4 text-sm font-semibold" aria-label="Sort repositories">
-            <option value="recommended">Best current fit</option>
-            <option value="recent">Recently updated</option>
-            <option value="adoption">Most established</option>
-          </select>
+          <label className="focus-within:focus-ring x-border flex h-12 items-center rounded-full border bg-[var(--background)] pl-4 pr-2">
+            <span className="x-muted mr-2 text-[10px] font-semibold uppercase tracking-[.12em]">Sort</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value as RepositorySort)} className="x-text min-w-0 bg-transparent pr-2 text-sm font-semibold outline-none" aria-label="Sort repositories">
+              <option value="recommended">Recommended</option>
+              <option value="recent">Latest commits</option>
+              <option value="adoption">Most starred</option>
+            </select>
+          </label>
           <button onClick={() => setSavedOnly((value) => !value)} aria-pressed={savedOnly} className={`focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold ${savedOnly ? "x-primary border-transparent" : "x-border x-text hover:bg-[var(--surface-raised)]"}`}><Bookmark size={16} fill={savedOnly ? "currentColor" : "none"} />Saved{savedRepositoryIds.length ? ` ${savedRepositoryIds.length}` : ""}</button>
         </div>
         <div className="mt-4 flex items-center justify-between gap-4">
@@ -137,7 +140,7 @@ function groupRepositories(entries: RankedContribution[], allIssues: OpenSourceO
     if (current) current.matchingIssueCount = Math.max(current.matchingIssueCount, entry.item.matchingIssueCount ?? 1);
   }
   return [...grouped.values()].sort((a, b) => {
-    if (sort === "recent") return Date.parse(b.primary.updatedAt) - Date.parse(a.primary.updatedAt);
+    if (sort === "recent") return Date.parse(b.primary.repositoryLastCommitAt ?? b.primary.updatedAt) - Date.parse(a.primary.repositoryLastCommitAt ?? a.primary.updatedAt);
     if (sort === "adoption") return (b.primary.repositoryQuality?.stars ?? 0) - (a.primary.repositoryQuality?.stars ?? 0);
     return b.rank - a.rank;
   });
@@ -191,6 +194,10 @@ function RepositoryCard({ entry, saved, onSave, onOpen }: { entry: RankedReposit
           <button type="button" onClick={onSave} aria-pressed={saved} className="focus-ring x-muted pointer-events-auto grid h-9 w-9 shrink-0 place-items-center rounded-full hover:bg-[var(--background)]" aria-label={saved ? `Remove ${entry.key} from saved repositories` : `Save ${entry.key}`}><Bookmark size={16} fill={saved ? "currentColor" : "none"} /></button>
         </div>
         <p className="x-muted mt-4 line-clamp-2 min-h-10 text-xs leading-5">{item.repositoryDescription || item.summary}</p>
+        <div className="x-border x-muted mt-3 inline-flex self-start items-center gap-1.5 rounded-full border bg-[var(--surface-raised)] px-2.5 py-1 text-[10px] font-semibold">
+          <GitCommitHorizontal size={11} />
+          <span>{item.repositoryLastCommitAt ? `Last commit ${formatRelativeAge(item.repositoryLastCommitAt)}` : "Latest commit syncing"}</span>
+        </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="x-border x-text inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.languageColor }} />{item.language}</span>
           <span className="x-border x-text inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold"><CircleDot size={11} />Contribution issues</span>
@@ -201,6 +208,21 @@ function RepositoryCard({ entry, saved, onSave, onOpen }: { entry: RankedReposit
       </div>
     </article>
   );
+}
+
+function formatRelativeAge(value: string) {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return "time unavailable";
+  const elapsed = Math.max(0, Date.now() - timestamp);
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (elapsed < minute) return "just now";
+  if (elapsed < hour) return `${Math.floor(elapsed / minute)} min ago`;
+  if (elapsed < day) return `${Math.floor(elapsed / hour)} hr ago`;
+  if (elapsed < 30 * day) return `${Math.floor(elapsed / day)}d ago`;
+  if (elapsed < 365 * day) return `${Math.floor(elapsed / (30 * day))}mo ago`;
+  return `${Math.floor(elapsed / (365 * day))}y ago`;
 }
 
 function compactNumber(value: number) {
