@@ -309,7 +309,23 @@ export function ProgramsDirectory({
                   </div>
                   <div className="min-w-0">
                     <p className="x-muted text-[11px] font-semibold uppercase tracking-[.12em]">{organization.category}</p>
-                    <h3 className="x-text mt-1 text-xl font-bold tracking-tight">{organization.name}</h3>
+                    <h3 className="x-text mt-1 text-xl font-bold tracking-tight">
+                      {isGsoc ? (
+                        <a
+                          href={"/programs/gsoc/" + organization.slug}
+                          className="focus-ring rounded"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                            event.preventDefault();
+                            openGsocOrganization(organization);
+                          }}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          {organization.name}
+                        </a>
+                      ) : organization.name}
+                    </h3>
                   </div>
                 </div>
 
